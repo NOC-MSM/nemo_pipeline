@@ -1,0 +1,42 @@
+[project]
+name = "nemo_pipeline"
+description = "NEMO Pipeline is a simple Python library to help scientists & ocean modellers quickly build reproducible data pipelines for calculating offline diagnostics using NEMO ocean general circulation model outputs."
+keywords = ["NEMO", "oceanography", "modelling", "analysis", "data"]
+readme = "README.md"
+dynamic = ["version"]
+authors = [{email = "oliver.tooth@noc.ac.uk"},{name = "Ollie Tooth"}]
+maintainers = [{name = "Ollie Tooth", email = "oliver.tooth@noc.ac.uk"}]
+license = { text = "Apache-2.0" }
+requires-python = ">=3.10"
+
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Intended Audience :: Science/Research"
+]
+
+dependencies = [
+  "argparse",
+  "ConfigParser",
+  "dask[complete]>=2024.10.0",
+  "gsw>=3.6.19",
+  "netcdf4",
+  "numpy>=1.26.4",
+  "xarray[accel]>=2024.10.0",
+  "zarr>=2.18.3",
+  ]
+
+[project.urls]
+Home = "https://github.com/NOC-MSM/nemo_pipeline"
+
+[tool.setuptools.dynamic]
+version = {attr = "nemo_pipeline.__init__.__version__"}
+
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools>=42", "setuptools-scm>=7"]
+
+[tool.setuptools]
+packages = ["nemo_pipeline"]
+
+[project.scripts]
+nemo_pipeline = "nemo_pipeline.cli:nemo_pipeline"
