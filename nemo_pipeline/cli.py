@@ -14,6 +14,7 @@ import nemo_pipeline.diagnostics as nemo_diags
 
 from .__init__ import __version__
 from .argparser import create_argparser
+from nemo_pipeline.submit import submit_slurm_job
 from nemo_pipeline.utils import get_config, parse_chunks
 from nemo_pipeline.pipeline import open_nemo_datasets, create_nemodatatree, save_nemo_diagnostics, describe_nemo_pipeline
 
@@ -37,7 +38,9 @@ def create_header() -> None:
     )
 
 
-def init_logging(log_filepath: str) -> None:
+def init_logging(
+    log_filepath: str
+    ) -> None:
     """
     Initialise NEMO Pipeline logging.
 
@@ -144,9 +147,17 @@ def nemo_pipeline() -> None:
     # -- Perform NEMO Pipeline action -- #
     if args['action'] == 'describe':
         describe_nemo_pipeline(args)
+        logging.info("✔ NEMO Pipeline Completed ✔")
 
     elif args['action'] == 'run':
         run_nemo_pipeline(args)
+        logging.info("✔ NEMO Pipeline Completed ✔")
     
-    logging.info("✔ NEMO Pipeline Completed ✔")
+    elif args['action'] == 'submit':
+        submit_slurm_job(args)
+        logging.info("✔ NEMO Pipeline Submitted ✔")
+
+    else:
+        raise ValueError(f"Invalid action: {args['action']}. Options are: 'describe', 'run', 'submit'.")
+
     sys.exit(0)
