@@ -42,6 +42,13 @@ def validate_config(
         if option not in config['OUTPUTS']:
             raise ValueError(f"missing required option in OUTPUTS section of config .ini file: {option}")
 
+    # 4. Optional SLURM section:
+    if 'SLURM' in config.sections():
+        slurm_options = ['job_dir', 'log_dir', 'ip_start', 'ip_end', 'ip_step', 'max_concurrent_jobs', 'sbatch.job_name', 'sbatch.time', 'sbatch.partition', 'sbatch.ntasks', 'sbatch.mem']
+        for option in slurm_options:
+            if option not in config['SLURM']:
+                raise ValueError(f"missing required option in SLURM section of config .ini file: {option}")
+
 
 def get_config(args):
     """
@@ -57,8 +64,8 @@ def get_config(args):
     configparser.ConfigParser
         Configuration parser object.
     """
-    # Read config file:
-    config = configparser.ConfigParser()
+    # Read config file - allow full-line comments only:
+    config = configparser.ConfigParser(inline_comment_prefixes=())
     config.read(args['config_file'])
 
     # Validate config file:
