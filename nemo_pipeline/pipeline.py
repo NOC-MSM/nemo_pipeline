@@ -14,7 +14,7 @@ import configparser
 import xarray as xr
 from nemo_cookbook import NEMODataTree
 
-from nemo_pipeline.utils import get_output_filename
+from nemo_pipeline.utils import get_output_filename, get_config, parse_chunks
 
 
 # -- Define Utility Functions -- #
@@ -142,15 +142,15 @@ def open_nemo_datasets(
     # Define NEMO grid filepaths & variables from config:
     grid_filepaths = {
         "gridT": inputs.get("gridT_filepath", None),
-        "gridV": inputs.get("gridV_filepath", None),
         "gridU": inputs.get("gridU_filepath", None),
+        "gridV": inputs.get("gridV_filepath", None),
         "gridW": inputs.get("gridW_filepath", None),
         "icemod": inputs.get("icemod_filepath", None),
     }
     grid_variables = {
         "gridT": inputs.get("gridT_vars", None),
-        "gridV": inputs.get("gridV_vars", None),
         "gridU": inputs.get("gridU_vars", None),
+        "gridV": inputs.get("gridV_vars", None),
         "gridW": inputs.get("gridW_vars", None),
         "icemod": inputs.get("icemod_vars", None),
     }
@@ -280,3 +280,79 @@ def save_nemo_diagnostics(
         ds_out.to_zarr(store=output_filepath, mode="w")
 
     return output_filepath
+
+
+def describe_nemo_pipeline(
+    args: dict
+    ) -> str:
+    """
+    Describe & validate NEMO Pipeline using config.
+
+    Parameters:
+    -----------
+    args : dict
+        Command line arguments.
+
+    Returns:
+    --------
+    str
+        Description of NEMO Pipeline package.
+    """
+    logging.info("==== Inputs ====")
+    # Read config file:
+    config = get_config(args=args)
+    logging.info(f"Read validated config file --> {args['config_file']}")
+
+    # NEMO model domain dataset:
+    logging.info("Read NEMO model domain & grid datasets:")
+    inputs = config["INPUTS"]
+    domain_filepath = inputs.get("domain_filepath", None)
+    logging.info(f"* Open NEMO model domain_cfg dataset --> {domain_filepath}")
+
+    # NEMO model grid filepaths & variables:
+    grid_filepaths = {
+        "gridT": inputs.get("gridT_filepath", None),
+        "gridU": inputs.get("gridU_filepath", None),
+        "gridV": inputs.get("gridV_filepath", None),
+        "gridW": inputs.get("gridW_filepath", None),
+        "icemod": inputs.get("icemod_filepath", None),
+    }
+    grid_variables = {
+        "gridT": inputs.get("gridT_vars", None),
+        "gridU": inputs.get("gridU_vars", None),
+        "gridV": inputs.get("gridV_vars", None),
+        "gridW": inputs.get("gridW_vars", None),
+        "icemod": inputs.get("icemod_vars", None),
+    }
+    for grid in grid_filepaths:
+        filepath = grid_filepaths[grid]
+        var_names = grid_variables[grid]
+        if filepath is not None:
+            if var_names is not None:
+                variables = [var.strip() for var in var_names.split(",")]
+            else:
+                variables = None
+            logging.info(f"* Open {variables} from NEMO model grid dataset --> {filepath}")
+
+    # NEMODataTree:
+    logging.info("Create NEMODataTree from NEMO datasets using:")
+    logging.info(f"* iperio = {config.getboolean('INPUTS', 'iperio')}")
+    logging.info(f"* nftype = {config.get('INPUTS', 'nftype')}")
+    logging.info(f"* read_mask = {config.getboolean('INPUTS', 'read_mask')}")
+
+    logging.info("==== Diagnostics ====")
+    diag_name = config.get("DIAGNOSTICS", "diagnostic_name")
+    logging.info(f"Calculate NEMO offline diagnostic --> {diag_name}()")
+
+    logging.info("==== Outputs ====")
+    logging.info(f"Save NEMO diagnostic(s) to {config.get('OUTPUTS', 'format')} file:")
+    # Parse config chunking str into dict:
+    chunks = parse_chunks(chunks_str=config.get("OUTPUTS", "chunks"))
+    logging.info(f"* Output Directory = {config.get('OUTPUTS', 'output_dir')}")
+    logging.info(f"* Output Dataset Chunks = {chunks}")
+    # Determine output file name:
+    if config.get("OUTPUTS", "format") == "netcdf":
+        extension = "nc"
+    else:
+        extension = "zarr"
+    logging.info(f"* Output File Name = {config.get('OUTPUTS', 'output_name')}_YYYY-MM_YYYY-MM.{extension}")
