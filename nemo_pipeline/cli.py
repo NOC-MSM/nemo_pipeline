@@ -10,10 +10,10 @@ Date Created: 28/10/2025
 # -- Import dependencies -- #
 import sys
 import logging
-import argparse
 import nemo_pipeline.diagnostics as nemo_diags
 
 from .__init__ import __version__
+from .argparser import create_argparser
 from nemo_pipeline.utils import get_config, parse_chunks
 from nemo_pipeline.pipeline import open_nemo_datasets, create_nemodatatree, save_nemo_diagnostics, describe_nemo_pipeline
 
@@ -61,34 +61,6 @@ def init_logging(log_filepath: str) -> None:
     )
 
 
-def create_argparser() -> argparse.ArgumentParser:
-    """
-    Create the argument parser.
-    """
-    # Create argument parser:
-    parser = argparse.ArgumentParser(
-        description=f"NEMO Pipeline {__version__} command line interface",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-    )
-
-    # Add NEMO Pipeline CLI actions:
-    parser.add_argument(
-        "action",
-        choices=["describe", "run"],
-        help="Specify NEMO Pipeline action: 'run' to execute pipeline or 'describe' to summarise stages of pipeline defined using config file",
-    )
-
-    # Add NEMO Pipeline CLI required arguments:
-    parser.add_argument('-c', '--config', type=str, action='store', dest='config_file',
-                        required=True, help='Path to the NEMO Pipeline config .ini file.')
-    
-    # Add NEMO Pipeline CLI optional arguments:
-    parser.add_argument('-l', '--log_path', type=str, action='store', dest='log_filepath',
-                        default='nemo_pipeline.log', help='Path to write NEMO Pipeline log file.')
-
-    return parser
-
-
 def run_nemo_pipeline(args: dict) -> None:
     """
     Run NEMO Pipeline using specified config .ini file.
@@ -113,8 +85,8 @@ def run_nemo_pipeline(args: dict) -> None:
 
     # Open NEMO model domain & grid datasets:
     logging.info("In Progress: Reading NEMO model domain & grid datasets...")
-    d_nemo = open_nemo_datasets(config=config)
-    logging.info("Completed: Reading NEMO model domain & grid datasets.")
+    d_nemo = open_nemo_datasets(config=config, args=args)
+    logging.info("Completed: Reading NEMO model domain & grid datasets")
 
     # Create NEMODataTree object:
     logging.info("In Progress: Constructing NEMODataTree from NEMO datasets...")
@@ -123,16 +95,16 @@ def run_nemo_pipeline(args: dict) -> None:
                                nftype=config.get("INPUTS", "nftype"),
                                read_mask=config.getboolean("INPUTS", "read_mask")
                                )
-    logging.info("Completed: Constructed NEMODataTree from NEMO datasets.")
+    logging.info("Completed: Constructed NEMODataTree from NEMO datasets")
 
     # === Diagnostics === #
     logging.info("==== Diagnostics ====")
     # Calculate specified NEMO offline diagnostic(s):
     diag_name = config.get("DIAGNOSTICS", "diagnostic_name")
     diag_func = getattr(nemo_diags, diag_name)
-    logging.info(f"In Progress: Calculating NEMO offline diagnostic -> {diag_name}...")
+    logging.info(f"In Progress: Calculating NEMO offline diagnostic -> {diag_name}()...")
     ds_diag = diag_func(nemo=nemo)
-    logging.info(f"Completed: Calculated NEMO offline diagnostic -> {diag_name}.")
+    logging.info(f"Completed: Calculated NEMO offline diagnostic -> {diag_name}()")
 
     # === Outputs === #
     logging.info("==== Outputs ====")
