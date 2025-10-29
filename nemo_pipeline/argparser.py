@@ -25,8 +25,8 @@ def create_argparser() -> argparse.ArgumentParser:
     # Add NEMO Pipeline CLI actions:
     parser.add_argument(
         "action",
-        choices=["describe", "run"],
-        help="Specify NEMO Pipeline action: 'run' to execute pipeline or 'describe' to summarise stages of pipeline defined using config file",
+        choices=["describe", "run", "submit"],
+        help="Specify NEMO Pipeline action: 'run' to execute pipeline, 'submit' to submit pipeline as SLURM job array, 'describe' to summarise stages of pipeline defined using config file",
     )
 
     # Add NEMO Pipeline CLI required arguments:
@@ -39,5 +39,8 @@ def create_argparser() -> argparse.ArgumentParser:
 
     parser.add_argument('-i', '--input_pattern', type=str, action='store', dest='input_pattern',
                         default=None, help='Pattern used to create NEMO model input file paths. Overrides input file paths in config file.')
+
+    parser.add_argument('-ns', '--no_submit', action='store_true', dest='no_submit',
+                        help='Do not submit the job to the SLURM scheduler. Useful to generate the job script only.')
 
     return parser
