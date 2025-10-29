@@ -18,6 +18,86 @@ from nemo_pipeline.utils import get_output_filename, get_config, parse_chunks
 
 
 # -- Define Utility Functions -- #
+def create_grid_filepaths(
+    config : configparser.ConfigParser,
+    args: dict
+    ) -> dict[str, str]:
+    """
+    Create dictionary of NEMO model grid filepaths from config.
+
+    Parameters:
+    -----------
+    config : configparser.ConfigParser
+        ConfigParser object containing NEMO model output file paths.
+    args : dict
+        Command line arguments.
+
+    Returns:
+    --------
+    dict[str, str]
+        Dictionary of NEMO model grid filepaths.
+    """
+    # Verify input:
+    if not isinstance(config, configparser.ConfigParser):
+        raise TypeError("config must be a configparser.ConfigParser object.")
+    if not isinstance(args, dict):
+        raise TypeError("args must be a dictionary.")
+
+    # Define NEMO model grid filepaths from config:
+    inputs = config["INPUTS"]
+
+    if args['input_pattern'] is not None:
+        # Replace input pattern in config filepaths:
+        grid_filepaths = {}
+        for grid in ['gridT', 'gridU', 'gridV', 'gridW', 'icemod']:
+            filepath = inputs.get(f"{grid}_filepath", None)
+            if filepath is not None:
+                if '{ip}' in filepath:
+                    filepath = filepath.replace('{ip}', args['input_pattern'])
+                    logging.info(f"* Overriding {grid}_filepath using input pattern --> {filepath}")
+            # Add grid filepath:
+            grid_filepaths[grid] = filepath
+    else:
+        # Use filepaths from config file:
+        for grid in ['gridT', 'gridU', 'gridV', 'gridW', 'icemod']:
+            filepath = inputs.get(f"{grid}_filepath", None)
+            if filepath is not None:
+                if '{ip}' in filepath:
+                    raise RuntimeError(f"Input pattern '{{ip}}' found in {grid}_filepath without specifying --input_pattern flag with nemo_pipeline")
+            # Add grid filepath:
+            grid_filepaths[grid] = filepath
+
+    return grid_filepaths
+
+
+def create_variable_lists(
+    config: configparser.ConfigParser
+    ) -> dict[str, list[str] | None]:
+    """
+    Create dictionary of NEMO model grid variable lists from config.
+
+    Parameters:
+    -----------
+    config : configparser.ConfigParser
+        ConfigParser object containing NEMO model output variables.
+
+    Returns:
+    --------
+    dict[str, list[str] | None]
+        Dictionary of NEMO model grid variable lists.
+    """
+    # Verify input:
+    if not isinstance(config, configparser.ConfigParser):
+        raise TypeError("config must be a configparser.ConfigParser object.")
+
+    # Define NEMO model grid variable lists from config:
+    inputs = config["INPUTS"]
+    grid_variables = {}
+    for grid in ['gridT', 'gridU', 'gridV', 'gridW', 'icemod']:
+        grid_variables[grid] = inputs.get(f"{grid}_vars", None)
+
+    return grid_variables
+
 def open_domain_ds(
     filepath: str
     ) -> xr.Dataset:
@@ -111,6 +191,7 @@ def open_grid_ds(
 
 def open_nemo_datasets(
     config: configparser.ConfigParser,
+    args: dict
     ) -> dict[str, xr.Dataset]:
     """
     Open NEMO model domain configuration and grid datasets.
@@ -119,6 +200,8 @@ def open_nemo_datasets(
     -----------
     config : configparser.ConfigParser
         ConfigParser object containing NEMO model output file paths.
+    args : dict
+        Command line arguments.
 
     Returns:
     --------
@@ -128,6 +211,8 @@ def open_nemo_datasets(
     # Verify input:
     if not isinstance(config, configparser.ConfigParser):
         raise TypeError("config must be a configparser.ConfigParser object.")
+    if not isinstance(args, dict):
+        raise TypeError("args must be a dictionary.")
 
     # Open NEMO domain configuration:
     inputs = config["INPUTS"]
@@ -140,20 +225,8 @@ def open_nemo_datasets(
         logging.info("--> Completed: Opened NEMO model domain_cfg dataset")
 
     # Define NEMO grid filepaths & variables from config:
-    grid_filepaths = {
-        "gridT": inputs.get("gridT_filepath", None),
-        "gridU": inputs.get("gridU_filepath", None),
-        "gridV": inputs.get("gridV_filepath", None),
-        "gridW": inputs.get("gridW_filepath", None),
-        "icemod": inputs.get("icemod_filepath", None),
-    }
-    grid_variables = {
-        "gridT": inputs.get("gridT_vars", None),
-        "gridU": inputs.get("gridU_vars", None),
-        "gridV": inputs.get("gridV_vars", None),
-        "gridW": inputs.get("gridW_vars", None),
-        "icemod": inputs.get("icemod_vars", None),
-    }
+    grid_filepaths = create_grid_filepaths(config=config, args=args)
+    grid_variables = create_variable_lists(config=config)
 
     # Open NEMO grid datasets:
     for grid in grid_filepaths:
@@ -310,20 +383,8 @@ def describe_nemo_pipeline(
     logging.info(f"* Open NEMO model domain_cfg dataset --> {domain_filepath}")
 
     # NEMO model grid filepaths & variables:
-    grid_filepaths = {
-        "gridT": inputs.get("gridT_filepath", None),
-        "gridU": inputs.get("gridU_filepath", None),
-        "gridV": inputs.get("gridV_filepath", None),
-        "gridW": inputs.get("gridW_filepath", None),
-        "icemod": inputs.get("icemod_filepath", None),
-    }
-    grid_variables = {
-        "gridT": inputs.get("gridT_vars", None),
-        "gridU": inputs.get("gridU_vars", None),
-        "gridV": inputs.get("gridV_vars", None),
-        "gridW": inputs.get("gridW_vars", None),
-        "icemod": inputs.get("icemod_vars", None),
-    }
+    grid_filepaths = create_grid_filepaths(config=config, args=args)
+    grid_variables = create_variable_lists(config=config)
     for grid in grid_filepaths:
         filepath = grid_filepaths[grid]
         var_names = grid_variables[grid]
