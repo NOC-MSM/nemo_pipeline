@@ -15,7 +15,7 @@ import nemo_pipeline.diagnostics as nemo_diags
 
 from .__init__ import __version__
 from nemo_pipeline.utils import get_config, parse_chunks
-from nemo_pipeline.pipeline import open_nemo_datasets, create_nemodatatree, save_nemo_diagnostics
+from nemo_pipeline.pipeline import open_nemo_datasets, create_nemodatatree, save_nemo_diagnostics, describe_nemo_pipeline
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ def create_header() -> None:
     )
 
 
-def init_logging(log_filepath: str | None) -> None:
+def init_logging(log_filepath: str) -> None:
     """
     Initialise NEMO Pipeline logging.
 
@@ -47,8 +47,8 @@ def init_logging(log_filepath: str | None) -> None:
         Filepath to log file. If None, logs to 'nemo_pipeline.log'.
     """
     # Verify input:
-    if log_filepath is None:
-        log_filepath = "nemo_pipeline.log"
+    if not isinstance(log_filepath, str):
+        raise TypeError("log_filepath must be a string.")
 
     logging.basicConfig(
         format="⦿──⦿  NEMO Pipeline  ⦿──⦿  | %(levelname)10s | %(asctime)s | %(message)s",
@@ -71,13 +71,20 @@ def create_argparser() -> argparse.ArgumentParser:
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
 
+    # Add NEMO Pipeline CLI actions:
+    parser.add_argument(
+        "action",
+        choices=["describe", "run"],
+        help="Specify NEMO Pipeline action: 'run' to execute pipeline or 'describe' to summarise stages of pipeline defined using config file",
+    )
+
     # Add NEMO Pipeline CLI required arguments:
     parser.add_argument('-c', '--config', type=str, action='store', dest='config_file',
                         required=True, help='Path to the NEMO Pipeline config .ini file.')
     
     # Add NEMO Pipeline CLI optional arguments:
-    parser.add_argument('-lf', '--log_filepath', type=str, action='store', dest='log_filepath',
-                        default=None, help='Path to write NEMO Pipeline log file.')
+    parser.add_argument('-l', '--log_path', type=str, action='store', dest='log_filepath',
+                        default='nemo_pipeline.log', help='Path to write NEMO Pipeline log file.')
 
     return parser
 
@@ -98,10 +105,6 @@ def run_nemo_pipeline(args: dict) -> None:
     args : dict
         Command line arguments.
     """
-    if len(sys.argv) == 1:
-        args.parser.print_help()
-        sys.exit(0)
-
     # === Inputs === #
     logging.info("==== Inputs ====")
     # Read config file:
@@ -154,13 +157,24 @@ def nemo_pipeline() -> None:
     """
     Run the NEMO Pipeline command line interface.
     """
+    # -- Parse Command Line Arguments -- #
     parser = create_argparser()
     args = vars(parser.parse_args())
 
+    if len(sys.argv) == 1:
+        args.parser.print_help()
+        sys.exit(0)
+
+    # -- Initialise Logging -- #
     init_logging(log_filepath=args['log_filepath'])
     create_header()
 
-    run_nemo_pipeline(args)
+    # -- Perform NEMO Pipeline action -- #
+    if args['action'] == 'describe':
+        describe_nemo_pipeline(args)
 
+    elif args['action'] == 'run':
+        run_nemo_pipeline(args)
+    
     logging.info("✔ NEMO Pipeline Completed ✔")
     sys.exit(0)
