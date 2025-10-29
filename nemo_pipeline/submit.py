@@ -62,7 +62,7 @@ def submit_slurm_job(
         venv_cmd = ""
 
     # Define nemo_pipeline command with arguments:
-    np_cmd = f"nemo_pipeline run --config {args['config_file']} --input_pattern $task_ip --log_path {slurm_params['log_dir']}/{slurm_params['log_prefix']}_$task_ip.log"
+    np_cmd = f"nemo_pipeline run --config {args['config_file']} --input_pattern $task_ip --log {slurm_params['log_dir']}/{slurm_params['log_prefix']}_$task_ip.log"
 
     # Create SLURM job script:
     job_script = f"""#!/bin/bash
