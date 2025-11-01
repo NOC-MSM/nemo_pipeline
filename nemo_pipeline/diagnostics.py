@@ -8,6 +8,7 @@ Date Created: 28/10/2025
 """
 
 # -- Import dependencies -- #
+import numpy as np
 import xarray as xr
 from nemo_cookbook import NEMODataTree
 
@@ -37,8 +38,9 @@ def extract_osnap_section(
 
     # Open OSNAP coords from gridded observations dataset:
     ds_osnap = xr.open_zarr("https://noc-msm-o.s3-ext.jc.rl.ac.uk/ocean-obs/OSNAP/OSNAP_Gridded_TSV_201408_202006_2023")
-    lon_osnap = ds_osnap['LONGITUDE'].values
-    lat_osnap = ds_osnap['LATITUDE'].values
+    # Define OSNAP section coordinates (adding final land point - UK):
+    lon_osnap = np.concatenate([ds_osnap['LONGITUDE'].values, np.array([-4.0])])
+    lat_osnap = np.concatenate([ds_osnap['LATITUDE'].values, np.array([56.0])])
 
     # Extract section from parent domain of NEMODataTree:
     ds_bdy = nemo.extract_section(
@@ -48,5 +50,14 @@ def extract_osnap_section(
         vars=['thetao_con', 'so_abs'],
         dom='.',
         )
+
+    # Add volume transport normal to OSNAP section:
+    ds_bdy['volume_transport'] = (
+        ds_bdy['velocity'] * ds_bdy['e1b'] * ds_bdy['e3b']
+        ).rename('volume_transport')
+
+    # Add CF attributes:
+    ds_bdy['volume_transport'].attrs['long_name'] = 'volume transport normal to OSNAP section'
+    ds_bdy['volume_transport'].attrs['units'] = 'm3 s-1'
 
     return ds_bdy
