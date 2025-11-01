@@ -51,11 +51,27 @@ def create_grid_filepaths(
         for grid in ['gridT', 'gridU', 'gridV', 'gridW', 'icemod']:
             filepath = inputs.get(f"{grid}_filepath", None)
             if filepath is not None:
-                if '${nemo_dir}' in filepath:
-                    filepath = filepath.replace('${nemo_dir}', inputs['nemo_dir'])
-                if '{ip}' in filepath:
-                    filepath = filepath.replace('{ip}', args['input_pattern'])
-                    logging.info(f"* Overriding {grid}_filepath using input pattern --> {filepath}")
+                if inputs['cmorised']:
+                    # List of CMORISED variable filepaths per NEMO model grid:
+                    if not isinstance(filepath, list):
+                        raise RuntimeError(f"Expected list of filepaths for CMORISED variables, received {type(filepath)}")
+                    for n, fpath in enumerate(filepath):
+                        if '${nemo_dir}' in fpath:
+                            fpath = fpath.replace('${nemo_dir}', inputs['nemo_dir'])
+                        if '{ip}' in fpath:
+                            fpath = fpath.replace('{ip}', args['input_pattern'])
+                            logging.info(f"* Overriding {grid}_filepath[{n}] using input pattern --> {fpath}")
+                        filepath[n] = fpath
+                else:
+                    # Single filepath per NEMO model grid:
+                    if not isinstance(filepath, str):
+                        raise RuntimeError(f"Expected string filepath for NEMO model grid, received {type(filepath)}")
+                    if '${nemo_dir}' in filepath:
+                        filepath = filepath.replace('${nemo_dir}', inputs['nemo_dir'])
+                    if '{ip}' in filepath:
+                        filepath = filepath.replace('{ip}', args['input_pattern'])
+                        logging.info(f"* Overriding {grid}_filepath using input pattern --> {filepath}")
+
             # Add grid filepath:
             grid_filepaths[grid] = filepath
     else:
@@ -157,13 +173,16 @@ def open_grid_ds(
     if len(filepaths) == 0:
         raise FileNotFoundError(f"No files found matching filepath: {filepath}")
 
+    # Define CFDatetimeCoder to decode time coords:
+    coder = xr.coders.CFDatetimeCoder(time_unit="s")
+
     # Open NEMO model grid dataset with specified variables only:
     if len(filepaths) == 1:
         try:
             if variables is None:
-                ds_grid = xr.open_dataset(filepaths[0], engine="netcdf4")
+                ds_grid = xr.open_dataset(filepaths[0], decode_times=coder, engine="netcdf4")
             else:
-                ds_grid = xr.open_dataset(filepaths[0], engine="netcdf4")[variables]
+                ds_grid = xr.open_dataset(filepaths[0], decode_times=coder, engine="netcdf4")[variables]
         except Exception as e:
             raise RuntimeError(f"Failed to open NEMO model grid dataset: {e}")
 
@@ -173,6 +192,7 @@ def open_grid_ds(
                 ds_grid = xr.open_mfdataset(filepaths,
                                             data_vars="minimal",
                                             compat="no_conflicts",
+                                            decode_times=coder,
                                             parallel=False,
                                             engine="netcdf4"
                                             )
@@ -180,6 +200,7 @@ def open_grid_ds(
                 ds_grid = xr.open_mfdataset(filepaths,
                                             data_vars="minimal",
                                             compat="no_conflicts",
+                                            decode_times=coder,
                                             parallel=False,
                                             engine="netcdf4",
                                             preprocess=lambda ds: ds[variables]
@@ -225,11 +246,11 @@ def open_nemo_datasets(
         d_nemo["domain"] = open_domain_ds(domain_filepath)
         logging.info("--> Completed: Opened NEMO model domain_cfg dataset")
 
-    # Define NEMO grid filepaths & variables from config:
+    # Define NEMO grid filepaths & variable names from config:
     grid_filepaths = create_grid_filepaths(config=config, args=args)
     grid_variables = create_variable_lists(config=config)
 
-    # Open NEMO grid datasets:
+    # Open NEMO model grid datasets:
     for grid in grid_filepaths:
         filepath = grid_filepaths[grid]
         var_names = grid_variables[grid]
@@ -237,6 +258,79 @@ def open_nemo_datasets(
             # Open grid dataset with specified variables:
             d_nemo[grid] = open_grid_ds(filepath, var_names)
             logging.info(f"--> Completed: Opened NEMO model {grid} dataset")
+
+    return d_nemo
+
+
+def open_cmorised_datasets(
+    config: dict,
+    args: dict
+    ) -> dict[str, xr.Dataset]:
+    """
+    Open NEMO model domain configuration and create
+    NEMO grid dataset from CMORISED data variables.
+
+    Parameters:
+    -----------
+    config : dict
+        Configuration parameters, including NEMO model output file paths.
+    args : dict
+        Command line arguments.
+
+    Returns:
+    --------
+    dict[str, xr.Dataset]
+        Dictionary of NEMO model domain & grid datasets.
+    """
+    # Verify input:
+    if not isinstance(config, dict):
+        raise TypeError("config must be a dictionary.")
+    if not isinstance(args, dict):
+        raise TypeError("args must be a dictionary.")
+
+    # Open NEMO domain configuration:
+    inputs = config["inputs"]
+    domain_filepath = inputs.get("domain_filepath", None)
+    if domain_filepath is None:
+        raise ValueError("domain_filepath must be specified in the config file.")
+    else:
+        d_nemo = {}
+        d_nemo["domain"] = open_domain_ds(filepath=domain_filepath)
+        logging.info("--> Completed: Opened NEMO model domain_cfg dataset")
+
+    # Define CMORISED variable filepaths & names from config:
+    grid_filepaths = create_grid_filepaths(config=config, args=args)
+    grid_variables = create_variable_lists(config=config)
+
+    # Create NEMO model grid datasets:
+    logging.info("In Progress: Creating NEMO model grid datasets from CMORISED variables.")
+    for grid in grid_filepaths:
+        filepaths = grid_filepaths[grid]
+        var_names = grid_variables[grid]
+        if filepaths is not None:
+            # Open & merge CMORISED variables into single NEMO model grid dataset:
+            if len(filepaths) != len(var_names):
+                raise ValueError(f"Number of filepaths ({len(filepaths)}) does not equal number of variables ({len(var_names)}) for grid {grid}.")
+            for n, fpath in enumerate(filepaths):
+                if n == 0:
+                    d_nemo[grid] = open_grid_ds(filepath=fpath, variables=var_names[n])
+                else:
+                    try:
+                        d_nemo[grid][var_names[n]] = open_grid_ds(filepath=fpath, variables=var_names[n])
+                    except Exception as e:
+                        raise RuntimeError(f"Failed to merge variable {var_names[n]} into NEMO model {grid} dataset: {e}")
+
+            # Update CMORISED dimensions to NEMO standard names:
+            try:
+                d_nemo[grid] = d_nemo[grid].rename({"i": "x",
+                                                    "j": "y",
+                                                    "lev": "z",
+                                                    "time": "time_counter"
+                                                    })
+            except Exception as e:
+                raise RuntimeError(f"Failed to rename dimensions in NEMO model {grid} dataset: {e}")
+
+            logging.info(f"--> Completed: Created NEMO model {grid} dataset")
 
     return d_nemo
 
@@ -377,8 +471,12 @@ def run_nemo_pipeline(
     logging.info(f"Completed: Read & validated config file -> {args['config_file']}")
 
     # Open NEMO model domain & grid datasets:
-    logging.info("In Progress: Reading NEMO model domain & grid datasets...")
-    d_nemo = open_nemo_datasets(config=config, args=args)
+    if config['inputs']['cmorised']:
+        logging.info("In Progress: Reading CMORISED NEMO model domain & grid datasets...")
+        d_nemo = open_cmorised_datasets(config=config, args=args)
+    else:
+        logging.info("In Progress: Reading NEMO model domain & grid datasets...")
+        d_nemo = open_nemo_datasets(config=config, args=args)
     logging.info("Completed: Reading NEMO model domain & grid datasets")
 
     # Create NEMODataTree object:
@@ -450,7 +548,10 @@ def describe_nemo_pipeline(
         filepath = grid_filepaths[grid]
         var_names = grid_variables[grid]
         if filepath is not None:
-            logging.info(f"* Open {var_names} from NEMO model grid dataset --> {filepath}")
+            if config['inputs']['cmorised']:
+                logging.info(f"* Create NEMO model grid dataset from CMORISED variables {var_names} --> {filepath}")
+            else:
+                logging.info(f"* Open {var_names} from NEMO model grid dataset --> {filepath}")
 
     # NEMODataTree:
     logging.info("Create NEMODataTree from NEMO datasets using:")
