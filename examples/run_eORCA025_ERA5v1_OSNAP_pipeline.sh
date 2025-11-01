@@ -15,7 +15,7 @@ set -euo pipefail
 # -- Input arguments to NEMO Pipeline -- #
 # Define filepaths:
 config_file=eORCA025_ERA5v1_OSNAP_config.ini
-log_file=eORCA025_ERA5v1_OSNAP_2010_2019.log
+log_file=eORCA025_ERA5v1_OSNAP_2020-2025.log
 # Define input file pattern to override config filepaths where {ip} is found:
 input_pattern=202
 

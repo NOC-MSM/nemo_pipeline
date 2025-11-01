@@ -1,6 +1,6 @@
 """
 NEMO Pipeline is a simple Python library to help scientists & ocean modellers quickly build reproducible
-data pipelines for calculating offline diagnostics using NEMO ocean general circulation model outputs.\
+data pipelines for calculating offline diagnostics using NEMO ocean general circulation model outputs.
 
 Authors:
     Ollie Tooth (oliver.tooth@noc.ac.uk)
