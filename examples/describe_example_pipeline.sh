@@ -25,4 +25,4 @@ source /home/otooth/miniconda3/etc/profile.d/conda.sh
 conda activate /dssgfs01/working/otooth/Software/conda_envs/env_nemo_cookbook
 
 # -- Run NEMO Pipeline CLI -- #
-nemo_pipeline describe --config $config_file --log $log_file --input_pattern $input_pattern
+nemo_pipeline describe $config_file --log $log_file --input-pattern $input_pattern

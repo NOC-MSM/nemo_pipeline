@@ -90,9 +90,9 @@ echo ---- Completed: NEMO Pipeline SLURM Job Task $task_ip ----
         f.write(job_script)
 
     # Submit job script to SLURM scheduler:
-    if args['no_submit']:
-        logging.info(f"Completed: Created SLURM job script (not submitted) --> {job_script_path}.")
-    else:
+    if args['submit']:
         result = subprocess.run(["sbatch", job_script_path], capture_output=True, text=True)
         print(result.stdout.strip())
         logging.info(f"Completed: Created & submitted SLURM job script --> {job_script_path}.")
+    else:
+        logging.info(f"Completed: Created SLURM job script without submitting --> {job_script_path}.")
