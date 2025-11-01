@@ -1,6 +1,6 @@
 [project]
 name = "nemo_pipeline"
-description = "NEMO Pipeline is a simple Python library to help scientists & ocean modellers quickly build reproducible data pipelines for calculating offline diagnostics using NEMO ocean general circulation model outputs."
+description = "NEMO Pipeline is a Python library dedicated to building reproducible data pipelines for calculating offline diagnostics using NEMO ocean general circulation model outputs."
 keywords = ["NEMO", "oceanography", "modelling", "analysis", "data"]
 readme = "README.md"
 dynamic = ["version"]
@@ -15,7 +15,7 @@ classifiers = [
 ]
 
 dependencies = [
-  "argparse",
+  "typer",
   "pydantic",
   "dask[complete]>=2024.10.0",
   "gsw>=3.6.19",
@@ -39,4 +39,4 @@ requires = ["setuptools>=42", "setuptools-scm>=7"]
 packages = ["nemo_pipeline"]
 
 [project.scripts]
-nemo_pipeline = "nemo_pipeline.cli:nemo_pipeline"
+nemo_pipeline = "nemo_pipeline.cli:app"
