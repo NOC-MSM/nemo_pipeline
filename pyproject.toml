@@ -16,7 +16,7 @@ classifiers = [
 
 dependencies = [
   "argparse",
-  "ConfigParser",
+  "pydantic",
   "dask[complete]>=2024.10.0",
   "gsw>=3.6.19",
   "netcdf4",
