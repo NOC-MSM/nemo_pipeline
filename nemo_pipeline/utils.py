@@ -8,60 +8,13 @@ Date Created: 28/10/2025
 """
 
 # -- Import dependencies -- #
+import cftime
 import tomllib
 import numpy as np
 import xarray as xr
 from pathlib import Path
 from typing import Literal
 from pydantic import BaseModel, Field
-
-
-def get_output_filename(
-    ds_out: xr.Dataset,
-    output_dir: str,
-    output_name: str,
-    file_format: str,
-    date_format: str
-    ) -> str:
-    """
-    Define NEMO Pipeline output filename.
-
-    Parameters:
-    -----------
-    ds_out : xr.Dataset
-        Output xarray Dataset.
-    output_dir : str
-        Directory to save output file.
-    output_name : str
-        Prefix of output file name.
-    file_format : str
-        Output file format. Options are 'netcdf' or 'zarr'.
-    date_format : str
-        Date format for datetime limits in output filename.
-        Options are 'Y' (YYYY), 'M' (YYYY-MM) or 'D' (YYYY-MM-DD).
-    """
-    # Validate inputs:
-    if not isinstance(ds_out, xr.Dataset):
-        raise TypeError("ds_out must be an xr.Dataset.")
-    if not isinstance(output_dir, str):
-        raise TypeError("output_dir must be a string.")
-    if not isinstance(output_name, str):
-        raise TypeError("output_name must be a string.")
-    if file_format not in ["netcdf", "zarr"]:
-        raise ValueError("file_format must be either 'netcdf' or 'zarr'.")
-
-    # Define time-limits of output dataset:
-    time_limits = ds_out['time_counter'].values[[0, -1]]
-    time_start = np.datetime_as_string(time_limits[0], unit=date_format)
-    time_end = np.datetime_as_string(time_limits[1], unit=date_format)
-
-    # Define output filename:
-    if file_format == "netcdf":
-        output_filename = f"{output_dir}/{output_name}_{time_start}_{time_end}.nc"
-    elif file_format == "zarr":
-        output_filename = f"{output_dir}/{output_name}_{time_start}_{time_end}.zarr"
-
-    return output_filename
 
 
 # Define Pydantic sub-models for each section of config .toml file:
@@ -102,14 +55,20 @@ class InputConfig(BaseModel):
     # CMORISED variables:
     cmorised : bool
     # NEMO T-grid (scalar) variables:
-    gridT_filepath : str | list[str]
-    gridT_vars : list[str]
+    gridT_filepath : str | list[str] | None = None
+    gridT_vars : list[str] | None = None
     # NEMO U-grid (zonal vector) variables:
-    gridU_filepath : str | list[str]
-    gridU_vars : list[str]
+    gridU_filepath : str | list[str] | None = None
+    gridU_vars : list[str] | None = None
     # NEMO V-grid (meridional vector) variables:
-    gridV_filepath : str | list[str]
-    gridV_vars : list[str]
+    gridV_filepath : str | list[str] | None = None
+    gridV_vars : list[str] | None = None
+    # NEMO W-grid (vertical vector) variables:
+    gridW_filepath : str | list[str] | None = None
+    gridW_vars : list[str] | None = None
+    # NEMO icemod (sea-ice) variables:
+    icemod_filepath : str | list[str] | None = None
+    icemod_vars : list[str] | None = None
 
 
 class DiagnosticConfig(BaseModel):
@@ -170,3 +129,67 @@ def load_config(args: dict) -> AppConfig:
     d_config = config.model_dump(mode="json")
 
     return d_config
+
+
+def get_output_filename(
+    ds_out: xr.Dataset,
+    output_dir: str,
+    output_name: str,
+    file_format: str,
+    date_format: str
+    ) -> str:
+    """
+    Define NEMO Pipeline output filename.
+
+    Parameters:
+    -----------
+    ds_out : xr.Dataset
+        Output xarray Dataset.
+    output_dir : str
+        Directory to save output file.
+    output_name : str
+        Prefix of output file name.
+    file_format : str
+        Output file format. Options are 'netcdf' or 'zarr'.
+    date_format : str
+        Date format for datetime limits in output filename.
+        Options are 'Y' (YYYY), 'M' (YYYY-MM) or 'D' (YYYY-MM-DD).
+    """
+    # Validate inputs:
+    if not isinstance(ds_out, xr.Dataset):
+        raise TypeError("ds_out must be an xr.Dataset.")
+    if not isinstance(output_dir, str):
+        raise TypeError("output_dir must be a string.")
+    if not isinstance(output_name, str):
+        raise TypeError("output_name must be a string.")
+    if file_format not in ["netcdf", "zarr"]:
+        raise ValueError("file_format must be either 'netcdf' or 'zarr'.")
+
+    # Define time-limits of output dataset:
+    time_limits = ds_out['time_counter'].values[[0, -1]]
+
+    # Create date string from CFTime datetime objects:
+    if isinstance(time_limits[0], cftime.datetime):
+        if date_format == "Y":
+            fmt = "%Y"
+        elif date_format == "M":
+            fmt = "%Y-%m"
+        elif date_format == "D":
+            fmt = "%Y-%m-%d"
+        else:
+            raise ValueError(f"Invalid date_format: '{date_format}'. Options are 'Y', 'M', 'D'.")
+        date_str = f"{time_limits[0].strftime(fmt)}-{time_limits[1].strftime(fmt)}"
+
+    # Create date string from numpy datetime64:
+    elif isinstance(time_limits[0], np.datetime64):
+        date_str = f"{np.datetime_as_string(time_limits[0], unit=date_format)}-{np.datetime_as_string(time_limits[1], unit=date_format)}"
+    else:
+        raise TypeError(f"Invalid type ({type(time_limits[0])}) for dates. Expected cftime.datetime or np.datetime64.")
+
+    # Define output filename:
+    if file_format == "netcdf":
+        output_filename = f"{output_dir}/{output_name}_{date_str}.nc"
+    elif file_format == "zarr":
+        output_filename = f"{output_dir}/{output_name}_{date_str}.zarr"
+
+    return output_filename
