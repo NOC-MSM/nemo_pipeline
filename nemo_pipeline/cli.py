@@ -8,13 +8,14 @@ Date Created: 28/10/2025
 """
 
 # -- Import dependencies -- #
-import sys
+import typer
 import logging
 from .__init__ import __version__
-from .argparser import create_argparser
+from typing_extensions import Annotated
 from nemo_pipeline.submit import submit_slurm_pipeline
 from nemo_pipeline.pipeline import describe_nemo_pipeline, run_nemo_pipeline
 
+app = typer.Typer()
 logger = logging.getLogger(__name__)
 
 # -- Define CLI Functions -- #
@@ -61,36 +62,96 @@ def init_logging(
     )
 
 
-def nemo_pipeline() -> None:
+# -- Create Typer App -- #
+@app.command()
+def describe(
+    config: Annotated[str, typer.Argument(help="Path to NEMO Pipeline config .toml file")],
+    log: Annotated[
+        str,
+        typer.Option(help="Path to write NEMO Pipeline log file", rich_help_panel="Options")
+    ] = "nemo_pipeline.log",
+    input_pattern: Annotated[
+        str,
+        typer.Option(help="Pattern used to substitute {ip} in NEMO grid filepaths in config .toml file.", rich_help_panel="Options"),
+    ] = "",
+) -> None:
     """
-    Run the NEMO Pipeline command line interface.
+    Describe NEMO pipeline defined by configuration (.toml) file.
     """
-    # -- Parse Command Line Arguments -- #
-    parser = create_argparser()
-    args = vars(parser.parse_args())
-
-    if len(sys.argv) == 1:
-        args.parser.print_help()
-        sys.exit(0)
-
     # -- Initialise Logging -- #
-    init_logging(log_filepath=args['log_filepath'])
+    init_logging(log_filepath=log)
     create_header()
 
-    # -- Perform NEMO Pipeline action -- #
-    if args['action'] == 'describe':
-        describe_nemo_pipeline(args)
-        logging.info("✔ NEMO Pipeline Completed ✔")
+    # -- Describe NEMO Pipeline -- #
+    args = {
+        "config_file": config,
+        "log_filepath": log,
+        "input_pattern": input_pattern,
+    }
+    describe_nemo_pipeline(args=args)
+    logging.info("✔ NEMO Pipeline Completed ✔")
 
-    elif args['action'] == 'run':
-        run_nemo_pipeline(args)
-        logging.info("✔ NEMO Pipeline Completed ✔")
-    
-    elif args['action'] == 'submit':
-        submit_slurm_pipeline(args)
+
+@app.command()
+def run(
+    config: Annotated[str, typer.Argument(help="Path to NEMO Pipeline config .toml file")],
+    log: Annotated[
+        str,
+        typer.Option(help="Path to write NEMO Pipeline log file", rich_help_panel="Options")
+    ] = "nemo_pipeline.log",
+    input_pattern: Annotated[
+        str,
+        typer.Option(help="Pattern used to substitute {ip} in NEMO grid filepaths in config .toml file.", rich_help_panel="Options"),
+    ] = "",
+) -> None:
+    """
+    Run NEMO pipeline defined by configuration (.toml) file in current process.
+    """
+    # -- Initialise Logging -- #
+    init_logging(log_filepath=log)
+    create_header()
+
+    # -- Run NEMO Pipeline -- #
+    args = {
+        "config_file": config,
+        "log_filepath": log,
+        "input_pattern": input_pattern,
+    }
+    run_nemo_pipeline(args=args)
+    logging.info("✔ NEMO Pipeline Completed ✔")
+
+
+@app.command()
+def submit(
+    config: Annotated[str, typer.Argument(help="Path to NEMO Pipeline config .toml file")],
+    log: Annotated[
+        str,
+        typer.Option(help="Path to write NEMO Pipeline log file", rich_help_panel="Options")
+    ] = "nemo_pipeline.log",
+    submit: Annotated[
+        bool,
+        typer.Option(help="Submit the job to the SLURM scheduler.", rich_help_panel="Options"),
+    ] = True,
+) -> None:
+    """
+    Submit NEMO pipeline defined by configuration (.toml) file as a SLURM job array.
+    """
+    # -- Initialise Logging -- #
+    init_logging(log_filepath=log)
+    create_header()
+
+    # -- Submit NEMO Pipeline -- #
+    args = {
+        "config_file": config,
+        "log_filepath": log,
+        "submit": submit,
+    }
+    submit_slurm_pipeline(args=args)
+    if submit:
         logging.info("✔ NEMO Pipeline Submitted ✔")
-
     else:
-        raise ValueError(f"Invalid action: {args['action']}. Options are: 'describe', 'run', 'submit'.")
+        logging.info("✔ NEMO Pipeline Completed ✔")
 
-    sys.exit(0)
+
+if __name__ == "__main__":
+    app()
