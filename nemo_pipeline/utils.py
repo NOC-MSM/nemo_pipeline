@@ -8,101 +8,12 @@ Date Created: 28/10/2025
 """
 
 # -- Import dependencies -- #
+import tomllib
 import numpy as np
-import configparser
 import xarray as xr
-
-
-def validate_config(
-    config: configparser.ConfigParser
-    ) -> None:
-    """
-    Validate NEMO Pipeline configuration file.
-
-    Parameters:
-    -----------
-    config : configparser.ConfigParser
-        Configuration parser object.
-    """
-    # 1. Required sections:
-    required_sections = ['INPUTS', 'DIAGNOSTICS', 'OUTPUTS']
-    for section in required_sections:
-        if section not in config.sections():
-            raise ValueError(f"missing required section in config .ini file: {section}")
-
-    # 2. Required options in INPUTS section:
-    required_input_options = ['domain_filepath', 'iperio', 'nftype', 'read_mask']
-    for option in required_input_options:
-        if option not in config['INPUTS']:
-            raise ValueError(f"missing required option in INPUTS section of config .ini file: {option}")
-
-    # 3. Required options in OUTPUTS section:
-    required_output_options = ['output_dir', 'output_name', 'format', 'date_format', 'chunks']
-    for option in required_output_options:
-        if option not in config['OUTPUTS']:
-            raise ValueError(f"missing required option in OUTPUTS section of config .ini file: {option}")
-
-    # 4. Optional SLURM section:
-    if 'SLURM' in config.sections():
-        slurm_options = ['job_dir', 'log_dir', 'ip_start', 'ip_end', 'ip_step', 'max_concurrent_jobs', 'sbatch.job_name', 'sbatch.time', 'sbatch.partition', 'sbatch.ntasks', 'sbatch.mem']
-        for option in slurm_options:
-            if option not in config['SLURM']:
-                raise ValueError(f"missing required option in SLURM section of config .ini file: {option}")
-
-
-def get_config(args):
-    """
-    Read NEMO Pipeline configuration file.
-
-    Parameters:
-    -----------
-    args : dict
-        Command line arguments.
-    
-    Returns:
-    --------
-    configparser.ConfigParser
-        Configuration parser object.
-    """
-    # Read config file - allow full-line comments only:
-    config = configparser.ConfigParser(inline_comment_prefixes=())
-    config.read(args['config_file'])
-
-    # Validate config file:
-    if not config.sections():
-        raise ValueError("Config file is empty or invalid.")
-    validate_config(config)
-
-    return config
-
-
-def parse_chunks(
-    chunks_str: str
-    ) -> dict:
-    """
-    Parse output chunk string from config file into dictionary.
-
-    Parameters:
-    -----------
-    chunks_str : str
-        Chunking string from config file, e.g. "time_counter:10, deptht:20".
-
-    Returns:
-    --------
-    dict
-        Dictionary defining chunk sizes for each output dimension.
-    """
-    # Validate input:
-    if chunks_str == 'None':
-        chunks = None
-    else:
-        if not isinstance(chunks_str, str):
-            raise TypeError("chunks_str must be a string.")
-
-        # Parse chunking string into dictionary:
-        chunks = {chunk.split(':')[0].strip(): int(chunk.split(':')[1]) for chunk in chunks_str.split(',')}
-
-    return chunks
+from pathlib import Path
+from typing import Literal
+from pydantic import BaseModel, Field
 
 
 def get_output_filename(
@@ -151,4 +62,111 @@ def get_output_filename(
         output_filename = f"{output_dir}/{output_name}_{time_start}_{time_end}.zarr"
 
     return output_filename
+
+
+# Define Pydantic sub-models for each section of config .toml file:
+class SLURMConfig(BaseModel):
+    """
+    NEMO Pipeline SLURM configuration model.
+    """
+    # Directories of SLURM job scripts and logs:
+    job_dir: str
+    log_dir: str
+    log_prefix : str
+    # SLURM batch job submission parameters:
+    sbatch_job_name : str
+    sbatch_time : str
+    sbatch_partition : str
+    sbatch_ntasks : int
+    sbatch_mem : str
+    # Define the initial, final and step input patterns for batch job submission:
+    ip_start : int
+    ip_end : int
+    ip_step : int
+    # Define maximum number of concurrent SLURM jobs.
+    max_concurrent_jobs : int
+    # Define Python virtual environment activation command.
+    venv_cmd : str
+
+class InputConfig(BaseModel):
+    """
+    NEMO Pipeline Input configuration model.
+    """
+    # Define NEMO ocean model filepaths used to construct NEMODataTree object:
+    nemo_dir : str
+    domain_filepath : str
+    # Domain Properties:
+    iperio : bool
+    nftype : Literal["T", "F"]
+    read_mask : bool
+    # CMORISED variables:
+    cmorised : bool
+    # NEMO T-grid (scalar) variables:
+    gridT_filepath : str | list[str]
+    gridT_vars : list[str]
+    # NEMO U-grid (zonal vector) variables:
+    gridU_filepath : str | list[str]
+    gridU_vars : list[str]
+    # NEMO V-grid (meridional vector) variables:
+    gridV_filepath : str | list[str]
+    gridV_vars : list[str]
+
+
+class DiagnosticConfig(BaseModel):
+    """
+    NEMO Pipeline diagnostic configuration model.
+    """
+    # Define diagnostics to be computed using NEMODataTree:
+    diagnostic_name: str
+
+
+class OutputConfig(BaseModel):
+    """
+    NEMO Pipeline output configuration model.
+    """
+    # Define NEMO ocean model pipeline output file:
+    output_dir : str
+    output_name : str
+    format : Literal["netcdf", "zarr"]
+    chunks : dict[str, int] = Field(default_factory=dict)
+    date_format : Literal["Y", "M", "D"]
+
+
+class AppConfig(BaseModel):
+    """
+    NEMO Pipeline CLI configuration model.
+    """
+    slurm: SLURMConfig
+    inputs: InputConfig
+    diagnostics: DiagnosticConfig
+    outputs: OutputConfig
+
+
+def load_config(args: dict) -> AppConfig:
+    """
+    Load NEMO Pipeline configuration .toml file.
+
+    Uses Pydantic models to parse and validate
+    configuration .toml files.
+
+    Parameters:
+    -----------
+    args : dict
+        Command line arguments.
     
+    Returns:
+    --------
+    dict
+        Configuration parameters.
+    """
+    # Open config .toml file:
+    path = Path(args['config_file'])
+    with open(path, "rb") as f:
+        data = tomllib.load(f)
+
+    # Parse and validate config data using Pydantic models:
+    config = AppConfig(**data)
+    # Convert config params to dict:
+    d_config = config.model_dump(mode="json")
+
+    return d_config
