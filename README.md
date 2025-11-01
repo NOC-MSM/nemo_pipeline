@@ -119,11 +119,11 @@ gridU_vars = [ "uo", "e3u" ]
 gridV_filepath = "${nemo_dir}/eORCA025_ERA5_1m_grid_V_{ip}*.nc"
 gridV_vars = [ "vo", "e3v" ]
 # NEMO W-grid (vertical vector) variables:
-# gridW_filepath = "/path/to/eORCA_grid_W_{ip}*.nc"
-# gridW_vars = [ "my", "vars" ]
+ gridW_filepath = "/path/to/eORCA_grid_W_{ip}*.nc"
+gridW_vars = [ "my", "vars" ]
 # NEMO icemod (sea-ice) variables:
-# icemod_filepath = "/path/to/eORCA_icemod_{ip}*.nc"
-# icemod_vars = [ "my", "vars"]
+icemod_filepath = "/path/to/eORCA_icemod_{ip}*.nc"
+icemod_vars = [ "my", "vars"]
 
 [diagnostics]
 # Define diagnostics to be computed using NEMODataTree:
@@ -143,11 +143,11 @@ chunks = { time_counter = 1, k = 75 }
 
 | Long version | Optional | Description |
 |---|---|---|
-| `COMMAND` | `False` | Specify the action: `describe` / `run` / `submit`. |
-| `config` | `False` | Path to NEMO pipeline config .toml file |
-| `--log` | `True` | Path to write NEMO pipeline log file. |
-| `--input-pattern` | `True` | Pattern used to subsititute `{ip}` in NEMO model input file paths in config file. |
-| `--submit` / `--no-submit` | `True` | Submit the job to the SLURM scheduler. |
+| `COMMAND` | **No** | Specify the action: `describe` / `run` / `submit`. |
+| `config` | **No** | Path to NEMO pipeline config .toml file |
+| `--log` | **Yes** | Path to write NEMO pipeline log file. |
+| `--input-pattern` | **Yes** | Pattern used to subsititute `{ip}` in NEMO model input file paths in config file. |
+| `--submit` / `--no-submit` | **Yes** | Submit the job to the SLURM scheduler. |
 
 
 ## Contact
