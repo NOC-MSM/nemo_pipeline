@@ -15,7 +15,7 @@ import nemo_pipeline.diagnostics as nemo_diags
 from .__init__ import __version__
 from .argparser import create_argparser
 from nemo_pipeline.submit import submit_slurm_job
-from nemo_pipeline.utils import get_config, parse_chunks
+from nemo_pipeline.utils import load_config
 from nemo_pipeline.pipeline import open_nemo_datasets, create_nemodatatree, save_nemo_diagnostics, describe_nemo_pipeline
 
 logger = logging.getLogger(__name__)
@@ -82,8 +82,8 @@ def run_nemo_pipeline(args: dict) -> None:
     """
     # === Inputs === #
     logging.info("==== Inputs ====")
-    # Read config file:
-    config = get_config(args=args)
+    # Load config .toml file:
+    config = load_config(args=args)
     logging.info(f"Completed: Read & verified config file -> {args['config_file']}")
 
     # Open NEMO model domain & grid datasets:
@@ -94,16 +94,16 @@ def run_nemo_pipeline(args: dict) -> None:
     # Create NEMODataTree object:
     logging.info("In Progress: Constructing NEMODataTree from NEMO datasets...")
     nemo = create_nemodatatree(d_nemo=d_nemo,
-                               iperio=config.getboolean("INPUTS", "iperio"),
-                               nftype=config.get("INPUTS", "nftype"),
-                               read_mask=config.getboolean("INPUTS", "read_mask")
+                               iperio=config['inputs']['iperio'],
+                               nftype=config['inputs']['nftype'],
+                               read_mask=config['inputs']['read_mask']
                                )
     logging.info("Completed: Constructed NEMODataTree from NEMO datasets")
 
     # === Diagnostics === #
     logging.info("==== Diagnostics ====")
     # Calculate specified NEMO offline diagnostic(s):
-    diag_name = config.get("DIAGNOSTICS", "diagnostic_name")
+    diag_name = config['diagnostics']['diagnostic_name']
     diag_func = getattr(nemo_diags, diag_name)
     logging.info(f"In Progress: Calculating NEMO offline diagnostic -> {diag_name}()...")
     ds_diag = diag_func(nemo=nemo)
@@ -111,18 +111,16 @@ def run_nemo_pipeline(args: dict) -> None:
 
     # === Outputs === #
     logging.info("==== Outputs ====")
-    logging.info(f"In Progress: Saving NEMO diagnostic(s) to {config.get('OUTPUTS', 'format')} file...")
-    # Parse chunking str to dict:
-    chunks = parse_chunks(chunks_str=config.get("OUTPUTS", "chunks"))
+    logging.info(f"In Progress: Saving NEMO diagnostic(s) to {config['outputs']['format']} file...")
 
     # Write NEMO Pipeline output dataset to file:
     output_filepath = save_nemo_diagnostics(
         ds_out=ds_diag,
-        output_dir=config.get("OUTPUTS", "output_dir"),
-        output_name=config.get("OUTPUTS", "output_name"),
-        file_format=config.get("OUTPUTS", "format"),
-        date_format=config.get("OUTPUTS", "date_format"),
-        chunks=chunks
+        output_dir=config['outputs']['output_dir'],
+        output_name=config['outputs']['output_name'],
+        file_format=config['outputs']['format'],
+        date_format=config['outputs']['date_format'],
+        chunks=config['outputs']['chunks']
         )
 
     logging.info(f"Completed: Saved NEMO diagnostic(s) to file -> {output_filepath}")
