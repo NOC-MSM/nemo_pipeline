@@ -11,8 +11,8 @@ Date Created: 28/10/2025
 import glob
 import logging
 import xarray as xr
+import nemo_pipeline.diagnostics as nemo_diags
 from nemo_cookbook import NEMODataTree
-
 from nemo_pipeline.utils import get_output_filename, load_config
 
 
@@ -352,6 +352,70 @@ def save_nemo_diagnostics(
     return output_filepath
 
 
+def run_nemo_pipeline(
+    args: dict
+    ) -> None:
+    """
+    Run NEMO Pipeline using specified config .ini file.
+
+    Pipeline Steps:
+    1. Read & validate config .ini file.
+    2. Open NEMO model domain & grid datasets.
+    3. Create NEMODataTree from NEMO datasets.
+    4. Calculate NEMO offline diagnostic(s).
+    5. Write NEMO diagnostic(s) to output file.
+
+    Parameters:
+    -----------
+    args : dict
+        Command line arguments.
+    """
+    # === Inputs === #
+    logging.info("==== Inputs ====")
+    # Load config .toml file:
+    config = load_config(args=args)
+    logging.info(f"Completed: Read & validated config file -> {args['config_file']}")
+
+    # Open NEMO model domain & grid datasets:
+    logging.info("In Progress: Reading NEMO model domain & grid datasets...")
+    d_nemo = open_nemo_datasets(config=config, args=args)
+    logging.info("Completed: Reading NEMO model domain & grid datasets")
+
+    # Create NEMODataTree object:
+    logging.info("In Progress: Constructing NEMODataTree from NEMO datasets...")
+    nemo = create_nemodatatree(d_nemo=d_nemo,
+                               iperio=config['inputs']['iperio'],
+                               nftype=config['inputs']['nftype'],
+                               read_mask=config['inputs']['read_mask']
+                               )
+    logging.info("Completed: Constructed NEMODataTree from NEMO datasets")
+
+    # === Diagnostics === #
+    logging.info("==== Diagnostics ====")
+    # Calculate specified NEMO offline diagnostic(s):
+    diag_name = config['diagnostics']['diagnostic_name']
+    diag_func = getattr(nemo_diags, diag_name)
+    logging.info(f"In Progress: Calculating NEMO offline diagnostic -> {diag_name}()...")
+    ds_diag = diag_func(nemo=nemo)
+    logging.info(f"Completed: Calculated NEMO offline diagnostic -> {diag_name}()")
+
+    # === Outputs === #
+    logging.info("==== Outputs ====")
+    logging.info(f"In Progress: Saving NEMO diagnostic(s) to {config['outputs']['format']} file...")
+
+    # Write NEMO Pipeline output dataset to file:
+    output_filepath = save_nemo_diagnostics(
+        ds_out=ds_diag,
+        output_dir=config['outputs']['output_dir'],
+        output_name=config['outputs']['output_name'],
+        file_format=config['outputs']['format'],
+        date_format=config['outputs']['date_format'],
+        chunks=config['outputs']['chunks']
+        )
+
+    logging.info(f"Completed: Saved NEMO diagnostic(s) to file -> {output_filepath}")
+
+
 def describe_nemo_pipeline(
     args: dict
     ) -> str:
@@ -371,7 +435,7 @@ def describe_nemo_pipeline(
     logging.info("==== Inputs ====")
     # Read config file:
     config = load_config(args=args)
-    logging.info(f"Read validated config file --> {args['config_file']}")
+    logging.info(f"Read & validated config file --> {args['config_file']}")
 
     # NEMO model domain dataset:
     logging.info("Read NEMO model domain & grid datasets:")

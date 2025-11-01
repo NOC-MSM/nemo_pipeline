@@ -13,11 +13,10 @@ import os
 import logging
 import subprocess
 from pathlib import Path
-
 from nemo_pipeline.utils import load_config
 
 # -- SLURM Job Submission -- #
-def submit_slurm_job(
+def submit_slurm_pipeline(
     args: dict,
     ) -> None:
     """
