@@ -22,7 +22,7 @@ venv_cmd = "source /home/otooth/miniconda3/etc/profile.d/conda.sh; conda activat
 # Define NEMO ocean model filepaths used to construct NEMODataTree object:
 nemo_dir = "/dssgfs01/scratch/npd/simulations/eORCA025_ERA5_v1"
 domain_filepath = "/dssgfs01/scratch/npd/simulations/Domains/eORCA025/domain_cfg.nc"
-# CMORISED NEMO variables:
+# Create NEMO model grid datasets from CMORISED variables:
 cmorised = false
 # Domain Properties:
 iperio = true
@@ -37,6 +37,12 @@ gridU_vars = [ "uo", "e3u" ]
 # NEMO V-grid (meridional vector) variables:
 gridV_filepath = "${nemo_dir}/eORCA025_ERA5_1m_grid_V_{ip}*.nc"
 gridV_vars = [ "vo", "e3v" ]
+# NEMO W-grid (vertical vector) variables:
+# gridW_filepath = "/path/to/eORCA_grid_W_{ip}*.nc"
+# gridW_vars = [ "my", "vars" ]
+# NEMO icemod (sea-ice) variables:
+# icemod_filepath = "/path/to/eORCA_icemod_{ip}*.nc"
+# icemod_vars = [ "my", "vars"]
 
 [diagnostics]
 # Define diagnostics to be computed using NEMODataTree:
