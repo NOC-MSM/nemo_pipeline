@@ -2,7 +2,7 @@
 
 set -euo pipefail
 # ================================================================
-# run_eORCA025_ERA5v1_OSNAP_pipeline.sh
+# submit_example_pipeline.sh
 #
 # Description: Run NEMO Pipeline to extract the Overturning in
 # the Subpolar North Atlantic Program (OSNAP) hydrographic section
@@ -14,8 +14,8 @@ set -euo pipefail
 
 # -- Input arguments to NEMO Pipeline -- #
 # Define filepaths:
-config_file=eORCA025_ERA5v1_OSNAP_config.ini
-log_file=eORCA025_ERA5v1_OSNAP_2020-2025.log
+config_file=example_config.toml
+log_file=example_pipeline.log
 # Define input file pattern to override config filepaths where {ip} is found:
 input_pattern=202
 
@@ -25,4 +25,4 @@ source /home/otooth/miniconda3/etc/profile.d/conda.sh
 conda activate /dssgfs01/working/otooth/Software/conda_envs/env_nemo_cookbook
 
 # -- Run NEMO Pipeline CLI -- #
-nemo_pipeline run --config $config_file --log $log_file --input_pattern $input_pattern
+nemo_pipeline submit --config $config_file --log $log_file --input_pattern $input_pattern
