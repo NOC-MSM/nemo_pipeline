@@ -38,7 +38,7 @@ def create_argparser() -> argparse.ArgumentParser:
                         default='nemo_pipeline.log', help='Path to write NEMO Pipeline log file.')
 
     parser.add_argument('-i', '--input_pattern', type=str, action='store', dest='input_pattern',
-                        default=None, help='Pattern used to subsititute {ip} in NEMO model input file paths in config file.')
+                        default="", help='Pattern used to subsititute {ip} in NEMO model input file paths in config file.')
 
     parser.add_argument('-ns', '--no_submit', action='store_true', dest='no_submit',
                         help='Do not submit the job to the SLURM scheduler. Useful to generate the job script only.')
