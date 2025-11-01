@@ -11,10 +11,10 @@ Date Created: 29/10/2025
 # -- Import Dependencies -- #
 import os
 import logging
-from pathlib import Path
 import subprocess
+from pathlib import Path
 
-from nemo_pipeline.utils import get_config
+from nemo_pipeline.utils import load_config
 
 # -- SLURM Job Submission -- #
 def submit_slurm_job(
@@ -38,9 +38,9 @@ def submit_slurm_job(
     # Load NEMO pipeline configuration:
     if ('/' not in args['config_file']):
         args['config_file'] = Path.cwd() / args['config_file']
-    config = get_config(args)
-    slurm_params = config['SLURM']
-    output_params = config['OUTPUTS']
+    config = load_config(args=args)
+    slurm_params = config['slurm']
+    output_params = config['outputs']
 
     # Create job, logging & output directories:
     if 'log_dir' not in slurm_params:
@@ -53,24 +53,22 @@ def submit_slurm_job(
     os.makedirs(output_params['output_dir'], exist_ok=True)
 
     # Get input patterns from filepaths:
-    ip_start = slurm_params.getint('ip_start')
-    ip_end = slurm_params.getint('ip_end')
-    ip_step = slurm_params.getint('ip_step')
-    max_concurrent = slurm_params.getint('max_concurrent_jobs')
-    venv_cmd = slurm_params.get('venv_cmd', None)
-    if venv_cmd is None:
-        venv_cmd = ""
+    ip_start = slurm_params['ip_start']
+    ip_end = slurm_params['ip_end']
+    ip_step = slurm_params['ip_step']
+    max_concurrent = slurm_params['max_concurrent_jobs']
+    venv_cmd = slurm_params['venv_cmd']
 
     # Define nemo_pipeline command with arguments:
     np_cmd = f"nemo_pipeline run --config {args['config_file']} --input_pattern $task_ip --log {slurm_params['log_dir']}/{slurm_params['log_prefix']}_$task_ip.log"
 
     # Create SLURM job script:
     job_script = f"""#!/bin/bash
-#SBATCH --job-name={slurm_params['sbatch.job_name']}
-#SBATCH --time={slurm_params['sbatch.time']}
-#SBATCH --partition={slurm_params['sbatch.partition']}
-#SBATCH --ntasks={slurm_params['sbatch.ntasks']}
-#SBATCH --mem={slurm_params['sbatch.mem']}
+#SBATCH --job-name={slurm_params['sbatch_job_name']}
+#SBATCH --time={slurm_params['sbatch_time']}
+#SBATCH --partition={slurm_params['sbatch_partition']}
+#SBATCH --ntasks={slurm_params['sbatch_ntasks']}
+#SBATCH --mem={slurm_params['sbatch_mem']}
 #SBATCH --output={slurm_params['log_dir']}/%A_%a.out
 #SBATCH --array={ip_start}-{ip_end}:{ip_step}%{max_concurrent}
 
