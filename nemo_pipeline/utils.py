@@ -78,6 +78,7 @@ class DiagnosticConfig(BaseModel):
     """
     # Define diagnostic to be computed using NEMODataTree:
     diagnostic: dict[str, str]
+    kwargs: dict = Field(default_factory=dict)
 
 
 class OutputConfig(BaseModel):
