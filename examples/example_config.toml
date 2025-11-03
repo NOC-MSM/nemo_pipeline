@@ -46,7 +46,7 @@ gridV_vars = [ "vo", "e3v" ]
 
 [diagnostics]
 # Define diagnostics to be computed using NEMODataTree:
-diagnostic_name = "extract_osnap_section"
+diagnostic = { module = "nemo_pipeline.diagnostics.core", function = "extract_osnap_section" }
 
 [outputs]
 # Define NEMO ocean model pipeline output file:
