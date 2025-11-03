@@ -11,9 +11,8 @@ Date Created: 28/10/2025
 import glob
 import logging
 import xarray as xr
-import nemo_pipeline.diagnostics as nemo_diags
 from nemo_cookbook import NEMODataTree
-from nemo_pipeline.utils import get_output_filename, load_config
+from nemo_pipeline.utils import get_output_filename, load_config, load_diagnostic
 
 
 # -- Define Utility Functions -- #
@@ -491,11 +490,14 @@ def run_nemo_pipeline(
     # === Diagnostics === #
     logging.info("==== Diagnostics ====")
     # Calculate specified NEMO offline diagnostic(s):
-    diag_name = config['diagnostics']['diagnostic_name']
-    diag_func = getattr(nemo_diags, diag_name)
-    logging.info(f"In Progress: Calculating NEMO offline diagnostic -> {diag_name}()...")
+    d_diag = config['diagnostics']['diagnostic']
+    diag_func = load_diagnostic(
+        module_name=d_diag['module'],
+        function_name=d_diag['function']
+    )
+    logging.info(f"In Progress: Calculating NEMO offline diagnostic -> {d_diag['function']}()...")
     ds_diag = diag_func(nemo=nemo)
-    logging.info(f"Completed: Calculated NEMO offline diagnostic -> {diag_name}()")
+    logging.info(f"Completed: Calculated NEMO offline diagnostic -> {d_diag['function']}()")
 
     # === Outputs === #
     logging.info("==== Outputs ====")
@@ -560,8 +562,8 @@ def describe_nemo_pipeline(
     logging.info(f"* read_mask = {config['inputs']['read_mask']}")
 
     logging.info("==== Diagnostics ====")
-    diag_name = config['diagnostics']['diagnostic_name']
-    logging.info(f"Calculate NEMO offline diagnostic --> {diag_name}()")
+    d_diag = config['diagnostics']['diagnostic']
+    logging.info(f"Calculate NEMO offline diagnostic --> {d_diag['function']}()")
 
     logging.info("==== Outputs ====")
     logging.info(f"Save NEMO diagnostic(s) to {config['outputs']['format']} file:")
