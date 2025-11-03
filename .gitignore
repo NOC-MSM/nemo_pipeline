@@ -6,6 +6,9 @@ __pycache__/
 # C extensions
 *.so
 
+# Development files:
+dev/
+
 # Example outputs:
 examples/outputs/
 
