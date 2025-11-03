@@ -10,6 +10,7 @@ Date Created: 28/10/2025
 # -- Import dependencies -- #
 import cftime
 import tomllib
+import importlib
 import numpy as np
 import xarray as xr
 from pathlib import Path
@@ -75,8 +76,8 @@ class DiagnosticConfig(BaseModel):
     """
     NEMO Pipeline diagnostic configuration model.
     """
-    # Define diagnostics to be computed using NEMODataTree:
-    diagnostic_name: str
+    # Define diagnostic to be computed using NEMODataTree:
+    diagnostic: dict[str, str]
 
 
 class OutputConfig(BaseModel):
@@ -129,6 +130,53 @@ def load_config(args: dict) -> AppConfig:
     d_config = config.model_dump(mode="json")
 
     return d_config
+
+
+def load_diagnostic(
+    module_name: str,
+    function_name: str
+    ):
+    """
+    Dynamically load user-defined diagnostic function.
+
+    Parameters:
+    -----------
+    module_name : str
+        Module name of user-defined diagnostic function.
+    function_name : str
+        Function name of user-defined diagnostic function.
+
+    Returns:
+    --------
+    function
+        User-defined diagnostic function.
+    """
+    # Validate inputs:
+    if not isinstance(module_name, str):
+        raise TypeError("module_name must be a string.")
+    if not isinstance(function_name, str):
+        raise TypeError("function_name must be a string.")
+
+    if not module_name.startswith("nemo_pipeline.diagnostics"):
+        raise ValueError(f"module {module_name} must be inside the 'nemo_pipeline.diagnostics' namespace.")
+    if not module_name.endswith(".core") and not module_name.endswith(".usrdef"):
+        raise ValueError("diagnostics must be defined in the 'nemo_pipeline.diagnostics.core' or 'nemo_pipeline.diagnostics.usrdef' modules.")
+
+    # Dynamically import diagnostic function:
+    try:
+        module = importlib.import_module(module_name)
+    except ImportError as e:
+        raise ImportError(f"Failed to import module '{module_name}': {e}")
+    try:
+        func = getattr(module, function_name)
+    except AttributeError as e:
+        raise AttributeError(f"Failed to import function '{function_name}' from module '{module_name}': {e}")
+
+    # Verify that diagnostic is callable:
+    if not callable(func):
+        raise TypeError(f"'{function_name}' in module '{module_name}' is not callable.")
+
+    return func
 
 
 def get_output_filename(
