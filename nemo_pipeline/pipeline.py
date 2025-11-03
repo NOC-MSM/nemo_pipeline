@@ -496,7 +496,7 @@ def run_nemo_pipeline(
         function_name=d_diag['function']
     )
     logging.info(f"In Progress: Calculating NEMO offline diagnostic -> {d_diag['function']}()...")
-    ds_diag = diag_func(nemo=nemo)
+    ds_diag = diag_func(nemo=nemo, **config['diagnostics']['kwargs'])
     logging.info(f"Completed: Calculated NEMO offline diagnostic -> {d_diag['function']}()")
 
     # === Outputs === #
@@ -512,8 +512,11 @@ def run_nemo_pipeline(
         date_format=config['outputs']['date_format'],
         chunks=config['outputs']['chunks']
         )
-
     logging.info(f"Completed: Saved NEMO diagnostic(s) to file -> {output_filepath}")
+
+    # Close all files associated with NEMODataTree:
+    nemo.close()
+    logging.info("Completed: Closed all netcdf files associated with NEMODataTree.")
 
 
 def describe_nemo_pipeline(
@@ -563,7 +566,7 @@ def describe_nemo_pipeline(
 
     logging.info("==== Diagnostics ====")
     d_diag = config['diagnostics']['diagnostic']
-    logging.info(f"Calculate NEMO offline diagnostic --> {d_diag['function']}()")
+    logging.info(f"Calculate NEMO offline diagnostic --> {d_diag['function']}({config['diagnostics']['kwargs']})")
 
     logging.info("==== Outputs ====")
     logging.info(f"Save NEMO diagnostic(s) to {config['outputs']['format']} file:")
