@@ -11,6 +11,7 @@ dev/
 
 # Example outputs:
 examples/outputs/
+examples/NOC-NPD/outputs/
 
 # Distribution / packaging
 .Python
