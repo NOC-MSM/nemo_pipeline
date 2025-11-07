@@ -9,6 +9,10 @@ sbatch_time = "00:10:00"
 sbatch_partition = "test"
 sbatch_ntasks = 1
 sbatch_mem = "6G"
+# Optional SLURM parameters:
+# sbatch_qos = "standard"
+# sbatch_account = "my_account"
+
 # Define the initial, final and step input patterns for batch job submission:
 ip_start = 2010
 ip_end = 2014
