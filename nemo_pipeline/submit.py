@@ -61,7 +61,7 @@ def submit_slurm_pipeline(
     # Define nemo_pipeline command with arguments:
     np_cmd = f"nemo_pipeline run {args['config_file']} --input-pattern $task_ip --log {slurm_params['log_dir']}/{slurm_params['log_prefix']}_$task_ip.log"
 
-    # Create SLURM job script:
+    # Create SLURM job directive header:
     job_script = f"""#!/bin/bash
 #SBATCH --job-name={slurm_params['sbatch_job_name']}
 #SBATCH --time={slurm_params['sbatch_time']}
@@ -70,7 +70,15 @@ def submit_slurm_pipeline(
 #SBATCH --mem={slurm_params['sbatch_mem']}
 #SBATCH --output={slurm_params['log_dir']}/%A_%a.out
 #SBATCH --array={ip_start}-{ip_end}:{ip_step}%{max_concurrent}
+    """
+    # Add conditional SLURM job directives:
+    if slurm_params['sbatch_account'] is not None:
+        job_script += f"#SBATCH --account={slurm_params['sbatch_account']}\n"
+    if slurm_params['sbatch_qos'] is not None:
+        job_script += f"#SBATCH --qos={slurm_params['sbatch_qos']}\n"
 
+    # Create SLURM job script:
+    job_script += f"""
 # -- SLURM Array Task ID -- #
 task_ip=${{SLURM_ARRAY_TASK_ID}}
 echo ---- Running NEMO Pipeline SLURM Job Task $task_ip ----

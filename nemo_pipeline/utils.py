@@ -33,6 +33,8 @@ class SLURMConfig(BaseModel):
     sbatch_partition : str
     sbatch_ntasks : int
     sbatch_mem : str
+    sbatch_qos : str | None = None
+    sbatch_account : str | None = None
     # Define the initial, final and step input patterns for batch job submission:
     ip_start : int
     ip_end : int
