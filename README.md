@@ -1,16 +1,16 @@
 # NEMO Pipeline
 
-**NEMO Pipeline** is a Python library dedicated to building reproducible data pipelines for calculating offline diagnostics using NEMO ocean general circulation model outputs.
+**NEMO Pipeline** is a Python library for building reproducible data pipelines to calculate diagnostics using NEMO ocean general circulation model outputs at scale.
 
 ### What is a NEMO Pipeline?
 
-Data pipelines are automated systems which open raw input data, calculate one or more diagnostics and write the results to an output destination.
+Data pipelines are automated systems which open raw input data, perform one or more calculations / transformations and write the results to an output file.
 
-**NEMO Pipeline** enables users to create scalable diagnostic pipelines for their ocean analysis or model validation using the three steps outlined above.
+**NEMO Pipeline** enables users to create scalable diagnostic pipelines for ocean analysis or model validation using these three steps.
 
 * **Input** --> Opening a collection of NEMO netCDF output files as one or more `xarray.Datasets`.
 
-* **Diagnostics** --> Use the `NEMODataTree` xarray object introduced in the [nemo_cookbook](https://github.com/NOC-MSM/nemo_cookbook/) library to calculate offline diagnostics, such as masked statistics and extracting hydrographic sections.
+* **Diagnostics** --> Use the `NEMODataTree` xarray object introduced in the [nemo_cookbook](https://github.com/NOC-MSM/nemo_cookbook/) library to calculate diagnostics, such as masked statistics or extracting hydrographic sections.
 
 * **Output** --> Write the diagnostics stored in an `xarray.Dataset` to a local file (netCDF or Zarr).
 
@@ -44,7 +44,7 @@ pip install -e .
 
 The **NEMO Pipeline** library allows users to create scalable pipelines to produce diagnostics from NEMO ocean model outputs using a **command line interface (CLI)**.
 
-All diagnostic pipelines are defined using a config `.ini` file.
+All diagnostic pipelines are defined using a config `.toml` file.
 
 There are three commands available to users:
 
@@ -131,7 +131,7 @@ diagnostic_name = "extract_osnap_section"
 
 [outputs]
 # Define NEMO ocean model pipeline output file:
-output_dir = "/dssgfs01/working/otooth/Software/nemo_pipeline/examples/outputs"
+output_dir = "/path/to/nemo_pipeline/examples/outputs"
 output_name = "eORCA025_ERA5_v1_OSNAP"
 date_format = "M"
 format = "netcdf"
