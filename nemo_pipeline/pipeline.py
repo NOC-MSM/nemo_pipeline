@@ -320,12 +320,11 @@ def open_cmorised_datasets(
                         raise RuntimeError(f"Failed to merge variable {var_names[n]} into NEMO model {grid} dataset: {e}")
 
             # Update CMORISED dimensions to NEMO standard names:
+            update_dims = {"i": "x", "j": "y", "time": "time_counter"}
+            if "lev" in d_nemo[grid].dims:
+                update_dims["lev"] = "z"
             try:
-                d_nemo[grid] = d_nemo[grid].rename({"i": "x",
-                                                    "j": "y",
-                                                    "lev": "z",
-                                                    "time": "time_counter"
-                                                    })
+                d_nemo[grid] = d_nemo[grid].rename(update_dims)
             except Exception as e:
                 raise RuntimeError(f"Failed to rename dimensions in NEMO model {grid} dataset: {e}")
 
