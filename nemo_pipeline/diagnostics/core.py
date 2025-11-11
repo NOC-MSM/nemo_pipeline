@@ -27,7 +27,7 @@ def extract_osnap_section(
     Parameters:
     -----------
     nemo : NEMODataTree
-        A hierarchical data tree of NEMO model outputs.
+        Hierarchical DataTree of NEMO model outputs.
     include_eiv : bool, optional
         Whether to calculate the total velocity from resolved
         & eddy-induced velocity (eiv) variables. Default is False.
@@ -129,5 +129,91 @@ def extract_osnap_section(
     ds_bdy['moc_east'].attrs['units'] = 'm3 s-1'
     ds_bdy['moc_west'].attrs['long_name'] = 'OSNAP West diapycnal overturning stream function'
     ds_bdy['moc_west'].attrs['units'] = 'm3 s-1'
+
+    return ds_bdy
+
+
+def extract_zonal_section(
+    nemo: NEMODataTree,
+    lat: float,
+    lon_min: float,
+    lon_max: float,
+    tau_name: str = 'tauuo',
+    scalar_names: list = ['thetao_con', 'so_abs'],
+) -> xr.Dataset:
+    """
+    Extract a zonal section at a chosen latitude from NEMODataTree.
+
+    Parameters:
+    -----------
+    nemo : NEMODataTree
+        NEMODataTree object containing the model data.
+    lat : float
+        Latitude of zonal section.
+    lon_min : float
+        Minimum longitude of zonal section.
+    lon_max : float
+        Maximum longitude of zonal section.
+    tau_name : str, optional
+        Name of the zonal wind stress variable to
+        extract along zonal section.
+    scalar_names : list, optional
+        List of scalar variable names to extract along
+        zonal section.
+
+    Returns:
+    --------
+    xr.Dataset
+        Velocity, seawater temperature, seawater salinity & zonal
+        wind stress data extracted along the zonal section.
+    """
+    # -- Clip domain & add geographical index to V-point grid -- #
+    nemo_geo = nemo.add_geoindex(grid='/gridV')
+
+    # -- Determine (i, j) indices of section endpoints -- #
+    nemo_start = nemo_geo['gridV'].dataset.sel(gphiv=lat, glamv=lon_min, method='nearest')
+    i_start = nemo_start['i'].values.item()
+    j_start = nemo_start['j'].values.item()
+    nemo_end = nemo_geo['gridV'].dataset.sel(gphiv=lat, glamv=lon_max, method='nearest')
+    i_end = nemo_end['i'].values.item()
+    j_end = nemo_end['j'].values.item()
+
+    # Meridional j-index of section:
+    if j_start == j_end:
+        j_sec = j_start
+    else:
+        j_list = [j_start, j_end]
+        j_lats = []
+        for j in np.arange(min(j_list), max(j_list) + 1):
+            j_lats.append(nemo_geo['gridV']['gphiv']
+                        .sel(i=slice(i_start, i_end), j=j)
+                        .mean(dim='i').values.item()
+                        )
+        # Select j-index of zonal section closest to specified latitude:
+        j_sec = j_list[np.argmin(np.abs(np.array(j_lats) - lat))]
+
+    # Zonal i-indices of section:
+    i_sec = [i_start, i_end]
+
+    # -- Extract zonal section at specified latitude -- #
+    # Transform scalar variables to V-point grid:
+    for var in scalar_names:
+        nemo_geo['gridV'][var] = nemo_geo.transform_to(grid='gridT', var=var, to='V')
+    # Transform zonal wind stress to V-point grid:
+    nemo_geo['gridV'][tau_name] = nemo_geo.transform_to(grid='gridU', var=tau_name, to='V')
+
+
+    # Extract zonal section & update dimensions & coordinate variables:
+    ds_bdy = nemo_geo['gridV'].dataset.sel(i=slice(i_sec[0], i_sec[1]), j=j_sec)
+    ds_bdy = (ds_bdy
+                  .rename_vars({"glamv": "glamb", "gphiv": "gphib", "depthv": "depthb",
+                                "e1v": "e1b", "e2v": "e2b", "e3v": "e3b",
+                                })
+                  .rename_dims({"i": "bdy"})
+                  )
+
+    # Drop global attributes from section dataset:
+    del ds_bdy.attrs['iperio']
+    del ds_bdy.attrs['nftype']
 
     return ds_bdy
