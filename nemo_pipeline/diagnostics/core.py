@@ -185,10 +185,10 @@ def extract_zonal_section(
         j_list = [j_start, j_end]
         j_lats = []
         for j in np.arange(min(j_list), max(j_list) + 1):
-            j_lats.append(nemo_geo['gridV']['gphiv']
-                        .sel(i=slice(i_start, i_end), j=j)
-                        .mean(dim='i').values.item()
-                        )
+            j_lats.append(nemo_geo['gridV/gphiv']
+                          .sel(i=slice(i_start, i_end), j=j)
+                          .mean(dim='i').values.item()
+                          )
         # Select j-index of zonal section closest to specified latitude:
         j_sec = j_list[np.argmin(np.abs(np.array(j_lats) - lat))]
 
@@ -211,6 +211,13 @@ def extract_zonal_section(
                                 })
                   .rename_dims({"i": "bdy"})
                   )
+    
+    # Apply mask to each variable:
+    for var in ds_bdy.data_vars:
+        if ds_bdy[var].dims == ('time_counter', 'k', 'bdy'):
+            ds_bdy[var] = ds_bdy[var].where(ds_bdy['vmask'])
+        elif ds_bdy[var].dims == ('time_counter', 'bdy'):
+            ds_bdy[var] = ds_bdy[var].where(ds_bdy['vmaskutil'])
 
     # Drop global attributes from section dataset:
     del ds_bdy.attrs['iperio']
