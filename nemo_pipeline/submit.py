@@ -73,7 +73,7 @@ def submit_slurm_pipeline(
     """
     # Add conditional SLURM job directives:
     if slurm_params['sbatch_account'] is not None:
-        job_script += f"#SBATCH --account={slurm_params['sbatch_account']}\n"
+        job_script += f"\n#SBATCH --account={slurm_params['sbatch_account']}\n"
     if slurm_params['sbatch_qos'] is not None:
         job_script += f"#SBATCH --qos={slurm_params['sbatch_qos']}\n"
 
