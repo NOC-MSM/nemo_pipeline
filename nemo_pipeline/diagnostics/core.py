@@ -50,15 +50,14 @@ def extract_osnap_section(
 
     if include_eiv:
         # Calculate total velocity = resolved + eddy-induced velocity (eiv):
-        if ('uo_eiv' not in nemo['/gridU'].data_vars) or ('vo_eiv' not in nemo['/gridV'].data_vars):
+        if ('uo_eiv' not in nemo['gridU'].data_vars) or ('vo_eiv' not in nemo['gridV'].data_vars):
             raise ValueError("variables 'uo_eiv' and 'vo_eiv' not found in NEMODataTree.")
-        nemo['/gridU']['u_total'] = nemo['/gridU']['uo'] + nemo['/gridU']['uo_eiv']
-        nemo['/gridV']['v_total'] = nemo['/gridV']['vo'] + nemo['/gridV']['vo_eiv']
+        nemo['gridU']['u_total'] = nemo['gridU']['uo'] + nemo['gridU']['uo_eiv']
+        nemo['gridV']['v_total'] = nemo['gridV']['vo'] + nemo['gridV']['vo_eiv']
     else:
         # Use resolved velocity only:
-        nemo['/gridU']['u_total'] = nemo['/gridU']['uo']
-        nemo['/gridV']['v_total'] = nemo['/gridV']['vo']
-
+        nemo['gridU']['u_total'] = nemo['gridU']['uo']
+        nemo['gridV']['v_total'] = nemo['gridV']['vo']
     # Extract section from parent domain of NEMODataTree:
     ds_bdy = nemo.extract_section(
         lon_section=lon_osnap,
@@ -168,7 +167,7 @@ def extract_zonal_section(
         wind stress data extracted along the zonal section.
     """
     # -- Clip domain & add geographical index to V-point grid -- #
-    nemo_geo = nemo.add_geoindex(grid='/gridV')
+    nemo_geo = nemo.add_geoindex(grid='gridV')
 
     # -- Determine (i, j) indices of section endpoints -- #
     nemo_start = nemo_geo['gridV'].dataset.sel(gphiv=lat, glamv=lon_min, method='nearest')
@@ -196,12 +195,12 @@ def extract_zonal_section(
     i_sec = [i_start, i_end]
 
     # -- Extract zonal section at specified latitude -- #
+    nemo_geo = nemo_geo.isel(i=slice(i_sec[0]-2, i_sec[1]+2), j=slice(int(j_sec)-2, int(j_sec)+2))
     # Transform scalar variables to V-point grid:
     for var in scalar_names:
         nemo_geo['gridV'][var] = nemo_geo.transform_to(grid='gridT', var=var, to='V')
     # Transform zonal wind stress to V-point grid:
     nemo_geo['gridV'][tau_name] = nemo_geo.transform_to(grid='gridU', var=tau_name, to='V')
-
 
     # Extract zonal section & update dimensions & coordinate variables:
     ds_bdy = nemo_geo['gridV'].dataset.sel(i=slice(i_sec[0], i_sec[1]), j=j_sec)
