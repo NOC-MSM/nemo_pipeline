@@ -16,6 +16,170 @@ from nemo_cookbook.stats import compute_binned_statistic
 
 
 # -- Core Diagnostics -- #
+def extract_bsea_section(
+    nemo: NEMODataTree,
+    include_eiv: bool = False,
+    ) -> xr.Dataset:
+    """
+    Extract Barents Sea (BSea) hydrographic section from NEMODataTree.
+
+    Parameters:
+    -----------
+    nemo : NEMODataTree
+        Hierarchical DataTree of NEMO model outputs.
+    include_eiv : bool, optional
+        Whether to calculate the total velocity from resolved
+        & eddy-induced velocity (eiv) variables. Default is False.
+
+    Returns:
+    --------
+    xr.Dataset
+        Velocity, volume transport, conservative temperature and
+        absolute salinity data extracted along the OSNAP section.
+    """
+    # Validate inputs:
+    if not isinstance(nemo, NEMODataTree):
+        raise TypeError("nemo must be a NEMODataTree object.")
+
+    # Define BSea section coordinates:
+    lon_bsea = np.arange(18.0, 24.3, 0.1)
+    lat_bsea = np.linspace(79.0, 70.0, len(lon_bsea))
+
+    if include_eiv:
+        # Calculate total velocity = resolved + eddy-induced velocity (eiv):
+        if ('uo_eiv' not in nemo['gridU'].data_vars) or ('vo_eiv' not in nemo['gridV'].data_vars):
+            raise ValueError("variables 'uo_eiv' and 'vo_eiv' not found in NEMODataTree.")
+        nemo['gridU']['u_total'] = nemo['gridU']['uo'] + nemo['gridU']['uo_eiv']
+        nemo['gridV']['v_total'] = nemo['gridV']['vo'] + nemo['gridV']['vo_eiv']
+    else:
+        # Use resolved velocity only:
+        nemo['gridU']['u_total'] = nemo['gridU']['uo']
+        nemo['gridV']['v_total'] = nemo['gridV']['vo']
+
+    # Extract section from parent domain of NEMODataTree:
+    ds_bdy = nemo.extract_section(
+        lon_section=lon_bsea,
+        lat_section=lat_bsea,
+        uv_vars=['u_total', 'v_total'],
+        vars=['thetao_con', 'so_abs'],
+        dom='.',
+        )
+
+    # Add potential density referenced to the sea surface:
+    ds_bdy['sigma0'] = gsw.density.sigma0(CT=ds_bdy['thetao_con'], SA=ds_bdy['so_abs'])
+    ds_bdy['sigma0'].name = 'sigma0'
+
+    # Add volume transport normal to BSea section:
+    ds_bdy['volume_transport'] = (
+        ds_bdy['velocity'] * ds_bdy['e1b'] * ds_bdy['e3b']
+        ).rename('volume_transport')
+
+    # Add CF attributes:
+    ds_bdy['velocity'].attrs['long_name'] = 'velocity normal to Barents Sea section'
+    ds_bdy['velocity'].attrs['units'] = 'm s-1'
+    ds_bdy['thetao_con'].attrs['long_name'] = 'conservative temperature'
+    ds_bdy['thetao_con'].attrs['units'] = 'degC'
+    ds_bdy['so_abs'].attrs['long_name'] = 'absolute salinity'
+    ds_bdy['so_abs'].attrs['units'] = 'g kg-1'
+    ds_bdy['sigma0'].attrs['long_name'] = 'potential density anomaly referenced to sea surface'
+    ds_bdy['sigma0'].attrs['units'] = 'kg m-3'
+    ds_bdy['volume_transport'].attrs['long_name'] = 'volume transport normal to Barents Sea section'
+    ds_bdy['volume_transport'].attrs['units'] = 'm3 s-1'
+
+    return ds_bdy
+
+
+def extract_gsr_section(
+    nemo: NEMODataTree,
+    include_eiv: bool = False,
+    ) -> xr.Dataset:
+    """
+    Extract Greenland Scotland Ridge (GSR) hydrographic
+    section from NEMODataTree.
+
+    Parameters:
+    -----------
+    nemo : NEMODataTree
+        Hierarchical DataTree of NEMO model outputs.
+    include_eiv : bool, optional
+        Whether to calculate the total velocity from resolved
+        & eddy-induced velocity (eiv) variables. Default is False.
+
+    Returns:
+    --------
+    xr.Dataset
+        Velocity, volume transport, conservative temperature and
+        absolute salinity data extracted along the OSNAP section.
+    """
+    # Validate inputs:
+    if not isinstance(nemo, NEMODataTree):
+        raise TypeError("nemo must be a NEMODataTree object.")
+
+    # Open Latrabjarg array coords from gridded observations dataset:
+    ds_latrabjarg = xr.open_zarr("https://noc-msm-o.s3-ext.jc.rl.ac.uk/ocean-obs/Latrabjarg/nsv_latrabjarg_section_climatology_1990_2012")
+
+    # Define GSR section coordinates:
+    lon_gsr = np.concatenate([np.array([-33.70]), ds_latrabjarg['longitude'].values, np.array([-23.81, -22.04, -21.09, -14.22, -6.90, -3.73])])
+    lat_gsr = np.concatenate([np.array([67.35]), ds_latrabjarg['latitude'].values, np.array([65.45, 65.71, 65.03, 65.10, 62.20, 58.32])])
+
+    if include_eiv:
+        # Calculate total velocity = resolved + eddy-induced velocity (eiv):
+        if ('uo_eiv' not in nemo['gridU'].data_vars) or ('vo_eiv' not in nemo['gridV'].data_vars):
+            raise ValueError("variables 'uo_eiv' and 'vo_eiv' not found in NEMODataTree.")
+        nemo['gridU']['u_total'] = nemo['gridU']['uo'] + nemo['gridU']['uo_eiv']
+        nemo['gridV']['v_total'] = nemo['gridV']['vo'] + nemo['gridV']['vo_eiv']
+    else:
+        # Use resolved velocity only:
+        nemo['gridU']['u_total'] = nemo['gridU']['uo']
+        nemo['gridV']['v_total'] = nemo['gridV']['vo']
+
+    # Extract section from parent domain of NEMODataTree:
+    ds_bdy = nemo.extract_section(
+        lon_section=lon_gsr,
+        lat_section=lat_gsr,
+        uv_vars=['u_total', 'v_total'],
+        vars=['thetao_con', 'so_abs'],
+        dom='.',
+        )
+
+    # Add potential density referenced to the sea surface:
+    ds_bdy['sigma0'] = gsw.density.sigma0(CT=ds_bdy['thetao_con'], SA=ds_bdy['so_abs'])
+    ds_bdy['sigma0'].name = 'sigma0'
+
+    # Add volume transport normal to GSR section:
+    ds_bdy['volume_transport'] = (
+        ds_bdy['velocity'] * ds_bdy['e1b'] * ds_bdy['e3b']
+        ).rename('volume_transport')
+
+    # Define potential density bins:
+    sigma0_bins = np.arange(20, 30, 0.01)
+
+    # Compute Total GSR diapycnal overturning stream function:
+    ds_bdy['moc_total'] = compute_binned_statistic(vars=[ds_bdy['sigma0']],
+                                                   values=ds_bdy['volume_transport'],
+                                                   keep_dims=['time_counter'],
+                                                   bins=[sigma0_bins],
+                                                   statistic='nansum',
+                                                   mask=None
+                                                   ).cumsum(dim='sigma0_bins')
+
+    # Add CF attributes:
+    ds_bdy['velocity'].attrs['long_name'] = 'velocity normal to GSR section'
+    ds_bdy['velocity'].attrs['units'] = 'm s-1'
+    ds_bdy['thetao_con'].attrs['long_name'] = 'conservative temperature'
+    ds_bdy['thetao_con'].attrs['units'] = 'degC'
+    ds_bdy['so_abs'].attrs['long_name'] = 'absolute salinity'
+    ds_bdy['so_abs'].attrs['units'] = 'g kg-1'
+    ds_bdy['sigma0'].attrs['long_name'] = 'potential density anomaly referenced to sea surface'
+    ds_bdy['sigma0'].attrs['units'] = 'kg m-3'
+    ds_bdy['volume_transport'].attrs['long_name'] = 'volume transport normal to GSR section'
+    ds_bdy['volume_transport'].attrs['units'] = 'm3 s-1'
+    ds_bdy['moc_total'].attrs['long_name'] = 'total GSR diapycnal overturning stream function'
+    ds_bdy['moc_total'].attrs['units'] = 'm3 s-1'
+
+    return ds_bdy
+
+
 def extract_osnap_section(
     nemo: NEMODataTree,
     include_eiv: bool = False,
@@ -58,6 +222,7 @@ def extract_osnap_section(
         # Use resolved velocity only:
         nemo['gridU']['u_total'] = nemo['gridU']['uo']
         nemo['gridV']['v_total'] = nemo['gridV']['vo']
+
     # Extract section from parent domain of NEMODataTree:
     ds_bdy = nemo.extract_section(
         lon_section=lon_osnap,
@@ -67,7 +232,7 @@ def extract_osnap_section(
         dom='.',
         )
 
-    # Add potential density reference to sea surface:
+    # Add potential density referenced to the sea surface:
     ds_bdy['sigma0'] = gsw.density.sigma0(CT=ds_bdy['thetao_con'], SA=ds_bdy['so_abs'])
     ds_bdy['sigma0'].name = 'sigma0'
 
@@ -181,9 +346,9 @@ def extract_zonal_section(
     if j_start == j_end:
         j_sec = j_start
     else:
-        j_list = [j_start, j_end]
+        j_list = np.arange(min([j_start, j_end]), max([j_start, j_end]) + 1)
         j_lats = []
-        for j in np.arange(min(j_list), max(j_list) + 1):
+        for j in j_list:
             j_lats.append(nemo_geo['gridV/gphiv']
                           .sel(i=slice(i_start, i_end), j=j)
                           .mean(dim='i').values.item()
