@@ -14,15 +14,15 @@ set -euo pipefail
 
 # -- Input arguments to NEMO Pipeline -- #
 # Define filepaths:
-config_file=eORCA1_ERA5v1_RAPID_config.toml
-log_file=eORCA1_ERA5v1_RAPID_pipeline.log
+config_file=eORCA1_ERA5v1_OSNAP_config.toml
+log_file=eORCA1_ERA5v1_OSNAP_pipeline.log
 
 # -- Python Environment -- #
 # Activate miniconda environment:
-source /my/miniconda3/etc/profile.d/conda.sh
-conda activate /my/env_nemo_cookbook
+source /home/otooth/miniconda3/etc/profile.d/conda.sh
+conda activate /dssgfs01/working/otooth/Software/conda_envs/env_nemo_cookbook
 
 # -- Run NEMO Pipeline CLI -- #
-nemo_pipeline describe $config_file --log $log_file --input-pattern 2025
+# nemo_pipeline describe $config_file --log $log_file --input-pattern 2025
 # nemo_pipeline run $config_file --log $log_file --input-pattern 2025
-# nemo_pipeline submit $config_file --log $log_file --submit
+nemo_pipeline submit $config_file --log $log_file --submit
