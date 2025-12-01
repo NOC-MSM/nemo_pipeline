@@ -1,0 +1,57 @@
+[slurm]
+# Define directories for SLURM job scripts and logs:
+job_dir = "/dssgfs01/working/otooth/Software/nemo_pipeline/examples/NOC-NPD/eORCA1/outputs/jobs"
+log_dir = "/dssgfs01/working/otooth/Software/nemo_pipeline/examples/NOC-NPD/eORCA1/outputs/logs"
+log_prefix = "eORCA1_ERA5_FS"
+# SLURM batch job submission parameters:
+sbatch_job_name = "nemo_pipeline_FS"
+sbatch_time = "00:10:00"
+sbatch_partition = "test"
+sbatch_ntasks = 1
+sbatch_mem = "6G"
+# Optional SLURM parameters:
+# sbatch_qos = "standard"
+# sbatch_account = "my_account"
+
+# Define the initial, final and step input patterns for batch job submission:
+ip_start = 1976
+ip_end = 2025
+ip_step = 1
+# Define maximum number of concurrent SLURM jobs:
+max_concurrent_jobs = 4
+# Define Python virtual environment activation command:
+venv_cmd = "source /home/otooth/miniconda3/etc/profile.d/conda.sh; conda activate /dssgfs01/working/otooth/Software/conda_envs/env_nemo_cookbook"
+
+[inputs]
+# Define NEMO ocean model filepaths used to construct NEMODataTree object:
+nemo_dir = "/dssgfs01/scratch/npd/simulations/eORCA1_ERA5_v1"
+domain_filepath = "/dssgfs01/scratch/npd/simulations/Domains/eORCA1/domain_cfg.nc"
+# Create NEMO model grid datasets from CMORISED variables:
+cmorised = false
+# Domain Properties:
+iperio = true
+nftype = "F"
+read_mask = false
+# NEMO T-grid (scalar) variables:
+gridT_filepath = "${nemo_dir}/eORCA1_ERA5_1m_grid_T_{ip}*.nc"
+gridT_vars = [ "thetao_con", "so_abs" ]
+# NEMO U-grid (zonal vector) variables:
+gridU_filepath = "${nemo_dir}/eORCA1_ERA5_1m_grid_U_{ip}*.nc"
+gridU_vars = [ "tauuo" ]
+# NEMO V-grid (meridional vector) variables:
+gridV_filepath = "${nemo_dir}/eORCA1_ERA5_1m_grid_V_{ip}*.nc"
+gridV_vars = [ "vo", "vo_eiv", "e3v" ]
+
+[diagnostics]
+# Define diagnostics to be computed using NEMODataTree:
+diagnostic = { module = "nemo_pipeline.diagnostics.core", function = "extract_zonal_section" }
+kwargs = { lat = 79.0, lon_min = -21.0, lon_max = 18.0, tau_name = "tauuo", scalar_names = [ "thetao_con", "so_abs" ] }
+
+[outputs]
+# Define NEMO ocean model pipeline output file:
+output_dir = "/dssgfs01/working/otooth/Software/nemo_pipeline/examples/NOC-NPD/eORCA1/outputs/FS"
+output_name = "eORCA1_ERA5_v1_FS"
+date_format = "M"
+format = "netcdf"
+# Define output dataset chunking:
+chunks = { time_counter = 1, k = 75 }
