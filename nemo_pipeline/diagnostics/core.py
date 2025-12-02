@@ -116,7 +116,7 @@ def extract_gsr_section(
         raise TypeError("nemo must be a NEMODataTree object.")
 
     # Open Latrabjarg array coords from gridded observations dataset:
-    ds_latrabjarg = xr.open_zarr("https://noc-msm-o.s3-ext.jc.rl.ac.uk/ocean-obs/Latrabjarg/nsv_latrabjarg_section_climatology_1990_2012")
+    ds_latrabjarg = xr.open_zarr("https://noc-msm-o.s3-ext.jc.rl.ac.uk/ocean-obs/Latrabjarg/Latrabjarg_section_climatology_1990_2012/")
 
     # Define GSR section coordinates:
     lon_gsr = np.concatenate([np.array([-33.70]), ds_latrabjarg['longitude'].values, np.array([-23.81, -22.04, -21.09, -14.22, -6.90, -3.73])])
