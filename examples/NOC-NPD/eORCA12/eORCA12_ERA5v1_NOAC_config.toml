@@ -1,0 +1,56 @@
+[slurm]
+# Define directories for SLURM job scripts and logs:
+job_dir = "/home/users/atb299/nemo_pipeline/examples/outputs/jobs"
+log_dir = "/home/users/atb299/nemo_pipeline/examples/outputs/logs"
+log_prefix = "eORCA12_ERA5_NOAC"
+# SLURM batch job submission parameters:
+sbatch_job_name = "nemo_pipeline"
+sbatch_time = "02:10:00"
+sbatch_partition = "standard"
+sbatch_qos = "standard"
+sbatch_account = "nemo"
+sbatch_ntasks = 1
+sbatch_mem = "96G"
+
+# Define the initial, final and step input patterns for batch job submission:
+ip_start = 1976
+ip_end = 2025
+ip_step = 1
+# Define maximum number of concurrent SLURM jobs:
+max_concurrent_jobs = 2
+# Define Python virtual environment activation command:
+venv_cmd = "source ~/.conda_init; conda activate env_nemo_cookbook"
+
+[inputs]
+# Define NEMO ocean model filepaths used to construct NEMODataTree object:
+nemo_dir = "/gws/nopw/j04/atlantis/atb299/NPD/eORCA12"
+domain_filepath = "/gws/nopw/j04/atlantis/atb299/NPD/eORCA12/Domain/domain_cfg.nc"
+# Create NEMO model grid datasets from CMORISED variables:
+cmorised = false
+# Domain Properties:
+iperio = true
+nftype = "T"
+read_mask = false
+# NEMO T-grid (scalar) variables:
+gridT_filepath = "${nemo_dir}/{ip}/eORCA12_1m_grid_T_{ip}*.nc"
+gridT_vars = [ "thetao_con", "so_abs" ]
+# NEMO U-grid (zonal vector) variables:
+gridU_filepath = "${nemo_dir}/{ip}/eORCA12_1m_grid_U_{ip}*.nc"
+gridU_vars = [ "tauuo" ]
+# NEMO V-grid (meridional vector) variables:
+gridV_filepath = "${nemo_dir}/{ip}/eORCA12_1m_grid_V_{ip}*.nc"
+gridV_vars = [ "vo", "e3v" ]
+
+[diagnostics]
+# Define diagnostics to be computed using NEMODataTree:
+diagnostic = { module = "nemo_pipeline.diagnostics.core", function = "extract_zonal_section" }
+kwargs = { lat = 47.0, lon_min = -53.65, lon_max = -0.61, tau_name = "tauuo", scalar_names = [ "thetao_con", "so_abs" ] }
+
+[outputs]
+# Define NEMO ocean model pipeline output file:
+output_dir = "/gws/nopw/j04/nemo_vol1/atb299/EPOC/Sections/NOAC"
+output_name = "eORCA12_ERA5_v1_NOAC"
+date_format = "M"
+format = "netcdf"
+# Define output dataset chunking:
+chunks = { time_counter = 1, k = 75 }
