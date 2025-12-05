@@ -17,6 +17,8 @@ ip_step = 1
 max_concurrent_jobs = 5
 # Define Python virtual environment activation command:
 venv_cmd = "source /home/otooth/miniconda3/etc/profile.d/conda.sh; conda activate /dssgfs01/working/otooth/Software/conda_envs/env_nemo_cookbook"
+# Kill the jobarray in the event of any job failure:
+kill_on_fail = true
 
 [inputs]
 # Define NEMO ocean model filepaths used to construct NEMODataTree object:

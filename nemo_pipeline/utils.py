@@ -43,6 +43,7 @@ class SLURMConfig(BaseModel):
     max_concurrent_jobs : int
     # Define Python virtual environment activation command.
     venv_cmd : str
+    kill_on_fail : bool
 
 class InputConfig(BaseModel):
     """
