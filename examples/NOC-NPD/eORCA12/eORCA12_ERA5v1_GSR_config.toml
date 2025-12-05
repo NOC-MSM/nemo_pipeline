@@ -36,10 +36,10 @@ gridT_filepath = "${nemo_dir}/{ip}/eORCA12_1m_grid_T_{ip}*.nc"
 gridT_vars = [ "thetao_con", "so_abs" ]
 # NEMO U-grid (zonal vector) variables:
 gridU_filepath = "${nemo_dir}/{ip}/eORCA12_1m_grid_U_{ip}*.nc"
-gridU_vars = [ "tauuo" ]
+gridU_vars = [ "uo", "e3u", "tauuo" ]
 # NEMO V-grid (meridional vector) variables:
 gridV_filepath = "${nemo_dir}/{ip}/eORCA12_1m_grid_V_{ip}*.nc"
-gridV_vars = [ "vo", "e3v" ]
+gridV_vars = [ "vo", "e3v", "tauvo" ]
 
 [diagnostics]
 # Define diagnostics to be computed using NEMODataTree:
