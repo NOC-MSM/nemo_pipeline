@@ -61,6 +61,19 @@ def submit_slurm_pipeline(
     # Define nemo_pipeline command with arguments:
     np_cmd = f"nemo_pipeline run {args['config_file']} --input-pattern $task_ip --log {slurm_params['log_dir']}/{slurm_params['log_prefix']}_$task_ip.log"
 
+    # Add check/kill job array in the event of failure:
+    if slurm_params['kill_on_fail']:
+        np_cmd += """\n
+# -- Kill array on fail -- #
+status=$?
+
+if [ $status -ne 0 ]; then
+    echo "Task $SLURM_ARRAY_TASK_ID failed — cancelling the array"
+    scancel $SLURM_ARRAY_JOB_ID
+    exit $status
+fi
+        """
+
     # Create SLURM job directive header:
     job_script = f"""#!/bin/bash
 #SBATCH --job-name={slurm_params['sbatch_job_name']}
