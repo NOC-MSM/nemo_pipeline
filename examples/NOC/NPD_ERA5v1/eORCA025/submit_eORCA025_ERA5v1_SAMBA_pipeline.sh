@@ -2,25 +2,21 @@
 
 set -euo pipefail
 # ================================================================
-# submit_eORCA025_ERA5v1_GSR_pipeline.sh
+# submit_eORCA025_ERA5v1_SAMBA_pipeline.sh
 #
-# Description: Run NEMO Pipeline to extract the Greenland-Scotland
-# Ridge (GSR) hydrographic section from the eORCA025-ERA5v1
-# simulation.
+# Description: Run NEMO Pipeline to extract the Overturning in
+# the South Atlantic Meridional Overturning (SAMBA) hydrographic
+# section from the eORCA025-ERA5v1 simulation.
+#
+# Virtual Environment: env_nemo
 #
 # Created By: Ollie Tooth (oliver.tooth@noc.ac.uk)
-# Created On: 2025-12-01
 # ================================================================
 
 # -- Input arguments to NEMO Pipeline -- #
 # Define filepaths:
-config_file=eORCA025_ERA5v1_GSR_config.toml
-log_file=eORCA025_ERA5v1_GSR_pipeline.log
-
-# -- Python Environment -- #
-# Activate miniconda environment:
-source /home/otooth/miniconda3/etc/profile.d/conda.sh
-conda activate /dssgfs01/working/otooth/Software/conda_envs/env_nemo_cookbook
+config_file=eORCA025_ERA5v1_SAMBA_config.toml
+log_file=eORCA025_ERA5v1_SAMBA_pipeline.log
 
 # -- Run NEMO Pipeline CLI -- #
 # nemo_pipeline describe $config_file --log $log_file --input-pattern 2025
