@@ -1,0 +1,57 @@
+[workspace]
+authors = ["Oliver Tooth <oliver.tooth@noc.ac.uk>"]
+preview = ["pixi-build"]
+channels = ["conda-forge"]
+platforms = ["win-64", "linux-64", "osx-arm64"]
+
+[package]
+name = "nemo_pipeline"
+version = "0.1.0"
+
+[package.build]
+backend = { name = "pixi-build-python", version = ">=0.4.4" }
+
+[package.host-dependencies]
+setuptools = "*"
+setuptools_scm = "*"
+
+[package.run-dependencies]
+python = "*"
+typer = "*"
+pydantic = "*"
+dask = "*"
+gsw = "*"
+netcdf4 = "<=1.7.3"
+numpy = "*"
+xarray = "*"
+zarr = "*"
+git = "*"  # needed for dynamic versioning
+
+[dependencies]
+nemo_pipeline = { path = "." }
+python = "3.13.*"
+
+[pypi-dependencies]
+nemo-cookbook = ">=2026.3.0b1, <2027"
+
+[feature.test.pypi-dependencies]
+pytest = "*"
+pytest-mock = "*"
+
+[feature.test.tasks]
+test = { cmd = "pytest --maxfail=1 --disable-warnings --tb=short", description = "Run NEMO Pipeline unit tests using pytest." }
+
+[feature.dev.dependencies]
+ipykernel = ">=7.2.0,<8"
+notebook = "*"
+line_profiler = ">=5.0.2,<6"
+
+[feature.release.pypi-dependencies]
+build = "*"
+twine = "*"
+
+[environments]
+default = { solve-group = "default" }
+test = { features = ["test"], solve-group = "default" }
+dev = { features = ["dev"], solve-group = "default" }
+release = { features = ["release"], solve-group = "default" }
