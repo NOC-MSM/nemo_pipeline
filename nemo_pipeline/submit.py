@@ -5,7 +5,6 @@ Description: Batch job submission functions for the
 NEMO Pipeline package.
 
 Created By: Ollie Tooth (oliver.tooth@noc.ac.uk)
-Date Created: 29/10/2025
 """
 
 # -- Import Dependencies -- #
@@ -20,19 +19,20 @@ def submit_slurm_pipeline(
     args: dict,
     ) -> None:
     """
-    Submit NEMO Pipeline tasks as a job to a SLURM scheduler.
+    Submit NEMO Pipeline as a single or array job to SLURM scheduler.
 
     Parameters
     ----------
     args : dict
         Command line arguments.
-    config : configparser.ConfigParser
-        Configuration object containing NEMO Pipeline settings.
+
+    Returns
+    -------
+    None
     """
-    # Verify inputs:
+    # -- Verify Inputs -- #
     if not isinstance(args, dict):
         raise TypeError("args must be a dictionary.")
-    logging.info("In Progress: Preparing NEMO Pipeline as SLURM job array...")
 
     # Load NEMO pipeline configuration:
     if ('/' not in args['config_file']):
@@ -40,6 +40,12 @@ def submit_slurm_pipeline(
     config = load_config(args=args)
     slurm_params = config['slurm']
     output_params = config['outputs']
+
+    job_type = slurm_params['jobs']['job_type']
+    if job_type == 'single':
+        logging.info("In Progress: Preparing NEMO Pipeline as a single SLURM job...")
+    elif job_type == 'array':
+        logging.info("In Progress: Preparing NEMO Pipeline as SLURM array job...")
 
     # Create job, logging & output directories:
     if 'log_dir' not in slurm_params:
@@ -51,66 +57,83 @@ def submit_slurm_pipeline(
     os.makedirs(slurm_params['job_dir'], exist_ok=True)
     os.makedirs(output_params['output_dir'], exist_ok=True)
 
-    # Get input patterns from filepaths:
-    ip_start = slurm_params['ip_start']
-    ip_end = slurm_params['ip_end']
-    ip_step = slurm_params['ip_step']
-    max_concurrent = slurm_params['max_concurrent_jobs']
-    venv_cmd = slurm_params['venv_cmd']
+    # Collect SLURM job parameters:
+    venv_cmd = slurm_params['jobs']['venv_cmd']
+    if job_type == 'array':
+        ip_start = slurm_params['jobs']['ip_start']
+        ip_end = slurm_params['jobs']['ip_end']
+        ip_step = slurm_params['jobs']['ip_step']
+        max_concurrent = slurm_params['jobs']['max_concurrent_jobs']
 
-    # Define nemo_pipeline command with arguments:
-    np_cmd = f"nemo_pipeline run {args['config_file']} --input-pattern $task_ip --log {slurm_params['log_dir']}/{slurm_params['log_prefix']}_$task_ip.log"
+    # -- Define nemo_pipeline command with arguments -- #
+    if job_type == 'single':
+        if args['input_pattern'] == "":
+            # Single SLURM job without input pattern argument:
+            np_cmd = f"nemo_pipeline run {args['config_file']} --log {slurm_params['log_dir']}/{slurm_params['log_prefix']}.log"
+        else:
+            # Single SLURM job with input pattern argument:
+            np_cmd = f"nemo_pipeline run {args['config_file']} --input-pattern {args['input_pattern']} --log {slurm_params['log_dir']}/{slurm_params['log_prefix']}.log"
+    elif job_type == 'array':
+        # SLURM array job with input pattern argument defined by SLURM_ARRAY_TASK_ID:
+        np_cmd = f"nemo_pipeline run {args['config_file']} --input-pattern $task_ip --log {slurm_params['log_dir']}/{slurm_params['log_prefix']}_$task_ip.log"
 
-    # Add check/kill job array in the event of failure:
-    if slurm_params['kill_on_fail']:
-        np_cmd += """\n
-# -- Kill array on fail -- #
+        # Include check & kill array in the event of job failure:
+        if slurm_params['jobs']['kill_on_fail']:
+            np_cmd += """\n
+# -- Kill Array on Fail -- #
 status=$?
 
 if [ $status -ne 0 ]; then
-    echo "Task $SLURM_ARRAY_TASK_ID failed — cancelling the array"
+    echo "Task $SLURM_ARRAY_TASK_ID Failed — Cancelling Job Array..."
     scancel $SLURM_ARRAY_JOB_ID
     exit $status
 fi
-        """
+            """
 
-    # Create SLURM job directive header:
+    # -- Create SLURM job directive header -- #
     job_script = f"""#!/bin/bash
-#SBATCH --job-name={slurm_params['sbatch_job_name']}
-#SBATCH --time={slurm_params['sbatch_time']}
-#SBATCH --partition={slurm_params['sbatch_partition']}
-#SBATCH --ntasks={slurm_params['sbatch_ntasks']}
-#SBATCH --mem={slurm_params['sbatch_mem']}
+#SBATCH --job-name={slurm_params['sbatch']['job_name']}
+#SBATCH --time={slurm_params['sbatch']['time']}
+#SBATCH --partition={slurm_params['sbatch']['partition']}
+#SBATCH --ntasks={slurm_params['sbatch']['ntasks']}
+#SBATCH --mem={slurm_params['sbatch']['mem']}
 #SBATCH --output={slurm_params['log_dir']}/%A_%a.out
-#SBATCH --array={ip_start}-{ip_end}:{ip_step}%{max_concurrent}
     """
-    # Add conditional SLURM job directives:
-    if slurm_params['sbatch_account'] is not None:
-        job_script += f"\n#SBATCH --account={slurm_params['sbatch_account']}\n"
-    if slurm_params['sbatch_qos'] is not None:
-        job_script += f"#SBATCH --qos={slurm_params['sbatch_qos']}\n"
+    # Add optional user-specified SLURM job directives:
+    if slurm_params['sbatch']['kwargs'] is not None:
+        for directive, value in slurm_params['sbatch']['kwargs'].items():
+            job_script += f"\n#SBATCH --{directive}={value}"
 
-    # Create SLURM job script:
-    job_script += f"""
-# -- SLURM Array Task ID -- #
+    # Add required SLURM job array directives:
+    if job_type == 'array':
+        job_script += f"\n#SBATCH --array={ip_start}-{ip_end}:{ip_step}%{max_concurrent}"
+
+    # -- Define SLURM job script -- #
+    # Add SLURM array task ID variable for job arrays:
+    if job_type == 'array':
+        job_script += """
+\n# -- SLURM Array Task ID -- #
 task_ip=${{SLURM_ARRAY_TASK_ID}}
 echo ---- Running NEMO Pipeline SLURM Job Task $task_ip ----
+        """
 
-# -- Activate Python Virtual Environment -- #
+    # Add Python venv activation & nemo_pipeline command to job script:
+    job_script += f"""
+\n# -- Activate Python Virtual Environment -- #
 {venv_cmd}
 
 # -- Run NEMO Pipeline -- #
 {np_cmd}
 
 echo ---- Completed: NEMO Pipeline SLURM Job Task $task_ip ----
-    """
+        """
     
-    # Write job script to file:
+    # -- Write job script to file -- #
     job_script_path = os.path.join(slurm_params['job_dir'], f"{slurm_params['log_prefix']}_nemo_pipeline.slurm")
     with open(job_script_path, 'w') as f:
         f.write(job_script)
 
-    # Submit job script to SLURM scheduler:
+    # -- Submit job script to SLURM scheduler -- #
     if args['submit']:
         result = subprocess.run(["sbatch", job_script_path], capture_output=True, text=True)
         print(result.stdout.strip())
