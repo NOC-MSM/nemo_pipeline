@@ -4,7 +4,6 @@ cli.py
 Description: Main command line interface for NEMO Pipeline package.
 
 Created By: Ollie Tooth (oliver.tooth@noc.ac.uk)
-Date Created: 28/10/2025
 """
 
 # -- Import dependencies -- #
@@ -132,6 +131,10 @@ def submit(
         bool,
         typer.Option(help="Submit the job to the SLURM scheduler.", rich_help_panel="Options"),
     ] = True,
+    input_pattern: Annotated[
+        str,
+        typer.Option(help="Pattern used to substitute {ip} in NEMO grid filepaths in config .toml file. Only applicable to single SLURM jobs.", rich_help_panel="Options"),
+    ] = "",
 ) -> None:
     """
     Submit NEMO pipeline defined by configuration (.toml) file as a SLURM job array.
@@ -145,6 +148,7 @@ def submit(
         "config_file": config,
         "log_filepath": log,
         "submit": submit,
+        "input_pattern": input_pattern,
     }
     submit_slurm_pipeline(args=args)
     if submit:
