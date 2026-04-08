@@ -1,17 +1,28 @@
+# ================================================================================ #
+# eORCA1_ERA5v1_SAMBA_config.toml
+#
+# Description: NOC NPD ERA5v1 eORCA1 configuration for NEMO pipeline - SAMBA section extraction.
+# ================================================================================ #
+
 [slurm]
 # Define directories for SLURM job scripts and logs:
 job_dir = "/dssgfs01/working/otooth/Software/nemo_pipeline/examples/NOC-NPD/eORCA1/outputs/jobs"
 log_dir = "/dssgfs01/working/otooth/Software/nemo_pipeline/examples/NOC-NPD/eORCA1/outputs/logs"
 log_prefix = "eORCA1_ERA5_SAMBA"
+
+[slurm.sbatch]
 # SLURM batch job submission parameters:
-sbatch_job_name = "nemo_pipeline_samba"
-sbatch_time = "00:10:00"
-sbatch_partition = "test"
-sbatch_ntasks = 1
-sbatch_mem = "6G"
-# Optional SLURM parameters:
-# sbatch_qos = "standard"
-# sbatch_account = "my_account"
+job_name = "nemo_pipeline_samba"
+time = "00:10:00"
+partition = "test"
+ntasks = 1
+mem = "6G"
+
+[slurm.jobs]
+# Define Python virtual environment activation command:
+venv_cmd = "source ~/miniforge3/bin/activate; conda activate env_nemo_cookbook"
+# Define SLURM job type ("array" or "single"):
+job_type = "array"
 
 # Define the initial, final and step input patterns for batch job submission:
 ip_start = 1976
@@ -19,10 +30,10 @@ ip_end = 2025
 ip_step = 1
 # Define maximum number of concurrent SLURM jobs:
 max_concurrent_jobs = 4
-# Define Python virtual environment activation command:
-venv_cmd = "source /home/otooth/miniconda3/etc/profile.d/conda.sh; conda activate /dssgfs01/working/otooth/Software/conda_envs/env_nemo_cookbook"
 # Kill the jobarray in the event of any job failure:
 kill_on_fail = true
+
+# ================================================================================ #
 
 [inputs]
 # Define NEMO ocean model filepaths used to construct NEMODataTree object:
@@ -34,20 +45,39 @@ cmorised = false
 iperio = true
 nftype = "F"
 read_mask = false
-# NEMO T-grid (scalar) variables:
-gridT_filepath = "${nemo_dir}/eORCA1_ERA5_1m_grid_T_{ip}*.nc"
-gridT_vars = [ "thetao_con", "so_abs" ]
-# NEMO U-grid (zonal vector) variables:
-gridU_filepath = "${nemo_dir}/eORCA1_ERA5_1m_grid_U_{ip}*.nc"
-gridU_vars = [ "tauuo" ]
-# NEMO V-grid (meridional vector) variables:
-gridV_filepath = "${nemo_dir}/eORCA1_ERA5_1m_grid_V_{ip}*.nc"
-gridV_vars = [ "vo", "vo_eiv", "e3v" ]
+
+[inputs.gridT]
+# -- NEMO T-grid (scalar) variables -- #
+filepath = "${nemo_dir}/eORCA1_ERA5_1m_grid_T_{ip}*.nc"
+vars = [ "thetao_con", "so_abs" ]
+
+[inputs.gridU]
+# -- NEMO U-grid (zonal vector) variables -- #
+filepath = "${nemo_dir}/eORCA1_ERA5_1m_grid_U_{ip}*.nc"
+vars = [ "tauuo" ]
+
+[inputs.gridV]
+# -- NEMO V-grid (meridional vector) variables -- #
+filepath = "${nemo_dir}/eORCA1_ERA5_1m_grid_V_{ip}*.nc"
+vars = [ "vo", "vo_eiv", "e3v" ]
+
+[inputs.gridW]
+# -- NEMO W-grid (vertical vector) variables -- #
+
+[inputs.gridF]
+# -- NEMO F-grid (vorticity vector) variables -- #
+
+[inputs.icemod]
+# -- NEMO icemod (sea-ice) variables -- #
+
+# ================================================================================ #
 
 [diagnostics]
 # Define diagnostics to be computed using NEMODataTree:
 diagnostic = { module = "nemo_pipeline.diagnostics.core", function = "extract_zonal_section" }
 kwargs = { lat = -34.0, lon_min = -56.0, lon_max = 20.75, tau_name = "tauuo", scalar_names = [ "thetao_con", "so_abs" ] }
+
+# ================================================================================ #
 
 [outputs]
 # Define NEMO ocean model pipeline output file:

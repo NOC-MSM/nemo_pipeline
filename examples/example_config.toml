@@ -16,11 +16,11 @@ log_prefix = "eORCA1_ERA5_OSNAP"
 # SLURM SBATCH submission directives:
 job_name = "nemo_pipeline_osnap"
 time = "00:10:00"
-account = "my_account"
+partition = "standard"
 ntasks = 1
 mem = "6G"
 # Optional SLURM SBATCH submission directives:
-kwargs = { qos = "standard", partition = "standard" }
+kwargs = { qos = "standard", account = "my_account" }
 
 [slurm.jobs]
 # Define Python virtual environment activation command:
