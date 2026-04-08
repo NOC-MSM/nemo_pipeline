@@ -1,18 +1,23 @@
 [project]
 name = "nemo_pipeline"
 description = "NEMO Pipeline is a Python library dedicated to building reproducible data pipelines for calculating offline diagnostics using NEMO ocean general circulation model outputs."
-keywords = ["NEMO", "oceanography", "modelling", "analysis", "data"]
-readme = "README.md"
-dynamic = ["version"]
+keywords = ["NEMO", "oceanography", "modelling", "analysis", "data", "pipelines", "diagnostics"]
+classifiers = [
+  "Operating System :: OS Independent",
+  "Intended Audience :: Science/Research",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Scientific/Engineering",
+]
+version = "0.1.0"
 authors = [{email = "oliver.tooth@noc.ac.uk"},{name = "Ollie Tooth"}]
 maintainers = [{name = "Ollie Tooth", email = "oliver.tooth@noc.ac.uk"}]
-license = { text = "Apache-2.0" }
-requires-python = ">=3.10"
-
-classifiers = [
-  "Programming Language :: Python :: 3",
-  "Intended Audience :: Science/Research"
-]
+license = "Apache-2.0"
+readme = "README.md"
+requires-python = ">=3.11"
 
 dependencies = [
   "typer",
@@ -26,14 +31,11 @@ dependencies = [
   ]
 
 [project.urls]
-Home = "https://github.com/NOC-MSM/nemo_pipeline"
-
-[tool.setuptools.dynamic]
-version = {attr = "nemo_pipeline.__init__.__version__"}
+Repository = "https://github.com/NOC-MSM/nemo_pipeline"
 
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = ["setuptools>=42", "setuptools-scm>=7"]
+requires = ["setuptools>=77.0.3", "setuptools-scm>=8"]
 
 [tool.setuptools]
 packages = ["nemo_pipeline"]
