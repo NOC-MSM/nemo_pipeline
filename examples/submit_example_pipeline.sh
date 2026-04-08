@@ -6,21 +6,17 @@ set -euo pipefail
 #
 # Description: Run NEMO Pipeline to extract the Overturning in
 # the Subpolar North Atlantic Program (OSNAP) hydrographic section
-# from the eORCA025 ERA5v1 simulation.
+# from an example eORCA1 ERA5v1 simulation.
 #
-# Created By: Ollie Tooth (oliver.tooth@noc.ac.uk)
-# Created On: 2025-10-28   
+# NEMO Pipeline will be submitted as a job to the SLURM scheduler.
+#
+# Created By: Ollie Tooth (oliver.tooth@noc.ac.uk) 
 # ================================================================
 
 # -- Input arguments to NEMO Pipeline -- #
 # Define filepaths:
 config_file=example_config.toml
 log_file=example_pipeline.log
-
-# -- Python Environment -- #
-# Activate miniconda environment:
-source /home/otooth/miniconda3/etc/profile.d/conda.sh
-conda activate /dssgfs01/working/otooth/Software/conda_envs/env_nemo_cookbook
 
 # -- Run NEMO Pipeline CLI -- #
 nemo_pipeline submit $config_file --log $log_file --submit
