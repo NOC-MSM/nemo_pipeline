@@ -1,12 +1,30 @@
 """
-NEMO Pipeline is a simple Python library to help scientists & ocean modellers quickly build reproducible
-data pipelines for calculating offline diagnostics using NEMO ocean general circulation model outputs.
+NEMO Pipeline
 
-Authors:
-    Ollie Tooth (oliver.tooth@noc.ac.uk)
+A Python library for building reproducible data pipelines to calculate diagnostics using NEMO
+ocean general circulation model outputs at scale.
 """
-__version__ = "0.1.0"
-__author__ = "Ollie Tooth"
-__credits__ = "National Oceanography Centre"
+__author__ = "Ollie Tooth (oliver.tooth@noc.ac.uk)"
+__credits__ = "National Oceanography Centre (NOC), Southampton, UK"
 
-from nemo_pipeline import cli
+from importlib.metadata import version as _version
+
+from nemo_pipeline import (
+    cli,
+    input,
+    output,
+    pipeline,
+    submit,
+    utils,
+    validation,
+    diagnostics
+)
+
+try:
+    __version__ = _version("nemo_pipeline")
+except Exception:
+    # Local copy or not installed with setuptools.
+    # Disable minimum version checks on downstream libraries.
+    __version__ = "9999.0.0"
+
+__all__ = ("cli", "input", "output", "pipeline", "submit", "utils", "validation", "diagnostics")
