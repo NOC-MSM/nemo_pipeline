@@ -25,6 +25,7 @@ dependencies = [
   "dask[complete]>=2024.10.0",
   "gsw>=3.6.19",
   "netcdf4",
+  "nemo_cookbook",
   "numpy>=1.26.4",
   "xarray[accel]>=2024.10.0",
   "zarr>=2.18.3",
