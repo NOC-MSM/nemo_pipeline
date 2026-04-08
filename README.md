@@ -1,4 +1,11 @@
-# NEMO Pipeline
+<p align="left">
+    <img src="./docs/assets/NEMO_Pipeline_Logo.png" alt="Logo" width="220" height="100">
+</p>
+
+[![Xarray](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/pydata/xarray/refs/heads/main/doc/badge.json)](https://xarray.dev)
+[![Powered by Pixi](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/prefix-dev/pixi/main/assets/badge/v0.json)](https://pixi.sh)
+
+## About
 
 **NEMO Pipeline** is a Python library for building reproducible data pipelines to calculate diagnostics using NEMO ocean general circulation model outputs at scale.
 
@@ -8,37 +15,31 @@ Data pipelines are automated systems which open raw input data, perform one or m
 
 **NEMO Pipeline** enables users to create scalable diagnostic pipelines for ocean analysis or model validation using these three steps.
 
-* **Input** --> Opening a collection of NEMO netCDF output files as one or more `xarray.Datasets`.
+* **Input** --> Opening a collection of NEMO netCDF output files as one or more `xarray.Datasets` to create a `NEMODataTree` object introduced in [**NEMO Cookbook**](https://github.com/NOC-MSM/nemo_cookbook/).
 
-* **Diagnostics** --> Use the `NEMODataTree` xarray object introduced in the [nemo_cookbook](https://github.com/NOC-MSM/nemo_cookbook/) library to calculate diagnostics, such as masked statistics or extracting hydrographic sections.
+* **Diagnostics** --> Use the `NEMODataTree` object to calculate a diagnostic, such as masked statistics or extracting hydrographic sections.
 
-* **Output** --> Write the diagnostics stored in an `xarray.Dataset` to a local file (netCDF or Zarr).
+* **Output** --> Write the diagnostics stored in a CF-compliant `xarray.Dataset` to a local file (netCDF or Zarr).
 
 ## Getting Started
 
 ### Installation
 
-To get started, download and install **NEMO Pipeline** into a new Python virtual environment via GitHub as follows.
-
-First, clone the **NEMO Pipeline** repository to your local machine:
+To get started, clone the **NEMO Pipeline** repository to your local machine:
 
 ```bash
 git clone git@github.com:NOC-MSM/nemo_pipeline.git
 ```
 
-Next, activate your new Python virtual environment and install the **NEMO Cookbook** library using `pip`:
+Next, install **NEMO Pipeline** into a new Python virtual environment in editable mode by using `pip install` in your local copy of the repository:
 
 ```bash
-pip install git+https://github.com/NOC-MSM/nemo_cookbook.git
-```
+cd nemo_pipeline
 
-Finally, you can install **NEMO Pipeline** into your virtual environment in editable mode:
-
-```bash
 pip install -e .
 ```
 
-**Note:** Here we have assumed that you are located inside your local copy of the `nemo_pipeline` directory.
+## Usage
 
 ### NEMO Pipeline CLI
 
@@ -48,11 +49,11 @@ All diagnostic pipelines are defined using a config `.toml` file.
 
 There are three commands available to users:
 
-* `describe` --> Summarise & validate the steps of a pipeline.
+* `describe` --> Summarise & validate the steps of a pipeline (analogous to a dry-run).
 
 * `run` --> Run pipeline in the current Python process.
 
-* `submit` --> Submit pipeline to be executed via a SLURM job array.
+* `submit` --> Submit pipeline to be executed via a single SLURM job or SLURM job array.
 
 Each command can be used with the following syntax:
 
@@ -62,82 +63,139 @@ nemo_pipeline COMMAND [ARGS]
 
 where `COMMAND` corresponds to the chosen command and `[ARGS]` represents the required and optional arguments used to define a pipeline. See below for details.
 
-### Config File
+### Config `.toml` Files
 
 To define a new **NEMO Pipeline**, we must populate a config `.toml` file which is structured into four sections as follows:
 
-* `[slurm]` --> Define parameters used to create SLURM job array script for submission.
+* `[slurm]` --> Define parameters used to create single SLURM job or SLURM job array script for submission.
 
-* `[inputs]` --> Define NEMO ocean model domain and grid filepaths and variables to extract.
+* `[inputs]` --> Define filepaths to NEMO ocean model domain and grid variables to construct `NEMODataTree`.
 
-* `[diagnostics]` --> Define name(s) of diagnostic functions which ingest `NEMODataTree` objects and return `xarray.Datasets`.
+* `[diagnostics]` --> Define diagnostic function to compute diagnostic from `NEMODataTree` and return a CF-compliant `xarray.Dataset`.
 
 * `[outputs]` --> Define output filepaths, naming conventions and chunk sizes.
 
-Below we present an example template for a config `.toml` file for extracting the Overturning in the Subpolar North Atlantic Program (OSNAP) array from a typical NEMO model output dataset.
+#### Example
 
-We use SLURM to divide the pipeline into 10 tasks (1 per year, 1990-1999), which will be submitted as a job array with a maximum of 2 tasks being executed concurrently.
+Below we present an example config `.toml` file to extract the Overturning in the Subpolar North Atlantic Program (OSNAP) array from a typical NEMO model output dataset...
 
-```bash
+* The `[slurm]` section is populated to divide the pipeline into 10 tasks (1 per year, 1990-1999 using `ip_start/end/step`), which will be submitted as a job array with a maximum of 2 tasks being executed concurrently (`max_concurrent_jobs`).
+
+* Each task in the SLURM job array will be executed on a single CPU (`ntasks`), which is assigned 6GB of memory (`mem`) and a 10 minute run time limit (`time`). If any SLURM job fails, the job array will be cancelled (`kill_on_fail`).
+
+* We use `venv_cmd` to define a bash command to activate the Python virtual environment used to execute NEMO Pipeline.
+
+```toml
 [slurm]
 # Define directories for SLURM job scripts and logs:
-job_dir = "/dssgfs01/working/otooth/Software/nemo_pipeline/examples/outputs/jobs"
-log_dir = "/dssgfs01/working/otooth/Software/nemo_pipeline/examples/outputs/logs"
-log_prefix = "eORCA025_ERA5_OSNAP"
-# SLURM batch job submission parameters:
-sbatch_job_name = "nemo_pipeline_osnap"
-sbatch_time = "00:10:00"
-sbatch_partition = "test"
-sbatch_ntasks = 1
-sbatch_mem = "6G"
-# Define the initial, final and step input patterns for batch job submission:
-ip_start = 2010
-ip_end = 2014
-ip_step = 1
-# Define maximum number of concurrent SLURM jobs:
-max_concurrent_jobs = 2
-# Define Python virtual environment activation command:
-venv_cmd = "source /home/otooth/miniconda3/etc/profile.d/conda.sh; conda activate /dssgfs01/working/otooth/Software/conda_envs/env_nemo_cookbook"
+job_dir = "/my/hpc/nemo_pipeline/examples/outputs/jobs"
+log_dir = "/my/hpc/nemo_pipeline/examples/outputs/logs"
+# Define log file prefix for SLURM job outputs:
+log_prefix = "eORCA1_ERA5_OSNAP"
 
+[slurm.sbatch]
+# SLURM SBATCH submission directives:
+job_name = "nemo_pipeline_osnap"
+time = "00:10:00"
+partition = "standard"
+ntasks = 1
+mem = "6G"
+# Optional SLURM SBATCH submission directives:
+kwargs = { qos = "standard", account = "my_account" }
+
+[slurm.jobs]
+# Define Python virtual environment activation command:
+venv_cmd = "source ~/miniforge3/bin/activate; conda activate env_nemo"
+# Define SLURM job type ("array" or "single"):
+job_type = "array"
+
+# Define the initial, final and step input patterns {ip} for SLURM job arrays:
+ip_start = 1990
+ip_end = 1999
+ip_step = 1
+# Define maximum number of concurrent jobs for SLURM job arrays:
+max_concurrent_jobs = 2
+# Kill SLURM job array in the event of any job failure:
+kill_on_fail = true
+```
+
+* In the `[inputs]` section, we define the path to the directory containing our NEMO ocean model outputs and domain_cfg netCDF files.
+
+* To construct a `NEMODataTree` from CMORISED NEMO model outputs (i.e., variables must be merged into grid datasets from separate netCDF files), we can use `cmorised = true`. We also specify the `iperio`, `nftype` and `read_mask` arguments that will be passed to the `NEMODataTree.from_datasets()` constructor.
+
+* In each of the `[inputs]` subsections (i.e., `[inputs.gridT]`), we specify the filepath or list of filepaths to our NEMO model output files, alongside a list of variables and chunk-sizes to be used.
+
+* Note that both `${nemo_dir}` and `{ip}` will be substituted for the NEMO output directory path (`nemo_dir`) and the input pattern (--input-pattern) during execution. In the case of a SLURM job array, the input pattern will be determined automatically from the `ip_start/end/step` arguments included in the `[slurm.jobs]` subsection.  
+
+```toml
 [inputs]
-# Define NEMO ocean model filepaths used to construct NEMODataTree object:
-nemo_dir = "/dssgfs01/scratch/npd/simulations/eORCA025_ERA5_v1"
-domain_filepath = "/dssgfs01/scratch/npd/simulations/Domains/eORCA025/domain_cfg.nc"
+# Define NEMO output directory and domain_cfg filepath to construct NEMODataTree:
+nemo_dir = "/dssgfs01/scratch/npd/simulations/eORCA1_ERA5_v1"
+domain_filepath = "/dssgfs01/scratch/npd/simulations/Domains/eORCA1/domain_cfg.nc"
 # Create NEMO model grid datasets from CMORISED variables:
 cmorised = false
-# Domain Properties:
+# Input arguments to construct NEMODataTree:
 iperio = true
 nftype = "T"
 read_mask = false
-# NEMO T-grid (scalar) variables:
-gridT_filepath = "${nemo_dir}/eORCA025_ERA5_1m_grid_T_{ip}*.nc"
-gridT_vars = [ "thetao_con", "so_abs" ]
-# NEMO U-grid (zonal vector) variables:
-gridU_filepath = "${nemo_dir}/eORCA025_ERA5_1m_grid_U_{ip}*.nc"
-gridU_vars = [ "uo", "e3u" ]
-# NEMO V-grid (meridional vector) variables:
-gridV_filepath = "${nemo_dir}/eORCA025_ERA5_1m_grid_V_{ip}*.nc"
-gridV_vars = [ "vo", "e3v" ]
-# NEMO W-grid (vertical vector) variables:
- gridW_filepath = "/path/to/eORCA_grid_W_{ip}*.nc"
-gridW_vars = [ "my", "vars" ]
-# NEMO icemod (sea-ice) variables:
-icemod_filepath = "/path/to/eORCA_icemod_{ip}*.nc"
-icemod_vars = [ "my", "vars"]
 
+[inputs.gridT]
+# -- NEMO gridT (scalar) variables -- #
+# Define filepath or list of filepaths with optional {ip} pattern to be substituted using --input-pattern argument:
+filepath = "${nemo_dir}/eORCA1_ERA5_1m_grid_T_{ip}*.nc"
+# Define list of variable names or list of list of variable names to be read from each file:
+vars = [ "thetao_con", "so_abs" ]
+# Define dictionary of chunks for all gridT variables:
+chunks = { k = 75 }
+
+[inputs.gridU]
+# -- NEMO gridU (zonal vector) variables -- #
+filepath = "${nemo_dir}/eORCA1_ERA5_1m_grid_U_{ip}*.nc"
+vars = [ "uo", "uo_eiv", "e3u" ]
+chunks = { k = 75 }
+
+[inputs.gridV]
+# -- NEMO gridV (meridional vector) variables -- #
+filepath = "${nemo_dir}/eORCA1_ERA5_1m_grid_V_{ip}*.nc"
+vars = [ "vo", "vo_eiv", "e3v" ]
+chunks = { k = 75 }
+
+[inputs.gridW]
+# -- NEMO gridW (vertical vector) variables -- #
+
+[inputs.gridF]
+# -- NEMO gridF (vorticity vector) variables -- #
+
+[inputs.icemod]
+# -- NEMO icemod (sea-ice) variables -- #
+```
+
+* In the `[diagnotics]` section, we specify the names of the Python module and diagnostic function as a dictionary, alongside any keyword arguments `kwargs` to be passed to the diagnostic.
+
+```toml
 [diagnostics]
 # Define diagnostics to be computed using NEMODataTree:
-diagnostic_name = "extract_osnap_section"
+diagnostic = { module = "nemo_pipeline.diagnostics.core", function = "extract_osnap_section" }
+# Define keyword arguments to be passed to diagnostic function:
+kwargs = { include_eiv = true }
+```
 
+* Finally, in the `[outputs]` section, we provide the directory path, date format and file name used to write our diagnostic dataset to a local netCDF file or Zarr store.
+
+```toml
 [outputs]
 # Define NEMO ocean model pipeline output file:
-output_dir = "/path/to/nemo_pipeline/examples/outputs"
-output_name = "eORCA025_ERA5_v1_OSNAP"
+output_dir = "/my/hpc/nemo_pipeline/examples/outputs"
+output_name = "eORCA1_ERA5_v1_OSNAP"
+# Define date format for output files. Options are "Y" (YYYY), "M" (YYYY-MM) or "D" (YYYY-MM-DD):
 date_format = "M"
+# Define output file format ("netcdf" or "zarr"):
 format = "netcdf"
 # Define output dataset chunking:
 chunks = { time_counter = 1, k = 75 }
 ```
+
+## Reference
 
 ### CLI Arguments
 
@@ -149,7 +207,57 @@ chunks = { time_counter = 1, k = 75 }
 | `--input-pattern` | **Yes** | Pattern used to subsititute `{ip}` in NEMO model input file paths in config file. |
 | `--submit` / `--no-submit` | **Yes** | Submit the job to the SLURM scheduler. |
 
+### How To...
+
+**Describe**
+* Describe & validate the NEMO Pipeline defined in the `/path/to/config.toml` without performing any calculations and write the summary to `/path/to/pipeline.log`
+
+```bash
+nemo_pipeline describe /path/to/config.toml --log /path/to/pipeline.log
+```
+
+**Run**
+
+* Run the NEMO Pipeline defined in the `/path/to/config.toml` in the current process. Substitute for the input pattern `{ip}` -> `2010` and write the summary to `/path/to/pipeline.log`. 
+
+```bash
+nemo_pipeline describe /path/to/config.toml --log /path/to/pipeline.log -input-pattern "2010"
+```
+
+* Run the NEMO Pipeline defined in the `/path/to/config.toml` in the current process. Substitute for the input pattern `{ip}` -> `2010`, `2011`, `2012` and write the summary to `/path/to/pipeline.log`. Note, that a `NEMODataTree` will be constructed from a list of filepaths produced by separately substituting each of the input patterns included in the list.
+
+```bash
+nemo_pipeline describe /path/to/config.toml --log /path/to/pipeline.log -input-pattern "[2010, 2011, 2012]"
+```
+
+**Submit**
+
+* Submit the NEMO Pipeline defined in the `/path/to/config.toml` as a single job to the SLURM scheduler. Substitute for the input pattern `{ip}` -> `2010` and write the summary to `/path/to/pipeline.log`. 
+
+```bash
+nemo_pipeline submit /path/to/config.toml --log /path/to/pipeline.log -input-pattern 2010
+```
+
+* Submit the NEMO Pipeline defined in the `/path/to/config.toml` as an array job to the SLURM scheduler and write the summary to `/path/to/pipeline.log`. 
+
+```bash
+nemo_pipeline submit /path/to/config.toml --log /path/to/pipeline.log
+```
+
+* Create a SLURM array job script for the NEMO Pipeline defined in the `/path/to/config.toml` without submitting to the SLURM scheduler and write the summary to `/path/to/pipeline.log`. This allows users to review the script before submitting the job using `sbatch` later. 
+
+```bash
+nemo_pipeline submit /path/to/config.toml --log /path/to/pipeline.log
+```
+
+## Funding
+The ongoing development of NEMO Pipeline is funded by the following projects: 
+
+- **AtlantiS**: [Atlantic Climate and Environment Strategic Science](https://atlantis.ac.uk)
+- **ARIA - PROMOTE**: [Progressing earth system Modelling for Tipping Point Early warning systems](https://aria.org.uk/opportunity-spaces/scoping-our-planet/forecasting-tipping-points/)
+- **EPOC**: [Explaining & Predicting the Ocean Conveyor](https://epoc-eu.org)
 
 ## Contact
 
-Ollie Tooth (**oliver.tooth@noc.ac.uk**) 
+* Ollie Tooth (**oliver.tooth@noc.ac.uk**)
+* Adam Blaker (**atb299@noc.ac.uk**)
