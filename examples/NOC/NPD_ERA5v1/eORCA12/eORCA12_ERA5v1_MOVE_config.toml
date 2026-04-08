@@ -1,16 +1,30 @@
+# ================================================================================ #
+# eORCA12_ERA5v1_MOVE_config.toml
+#
+# Description: NOC NPD ERA5v1 eORCA12 configuration for NEMO pipeline
+# -> MOVE section extraction.
+# ================================================================================ #
+
 [slurm]
 # Define directories for SLURM job scripts and logs:
 job_dir = "/home/users/atb299/nemo_pipeline/examples/outputs/jobs"
 log_dir = "/home/users/atb299/nemo_pipeline/examples/outputs/logs"
 log_prefix = "eORCA12_ERA5_MOVE"
+
+[slurm.sbatch]
 # SLURM batch job submission parameters:
-sbatch_job_name = "nemo_pipeline"
-sbatch_time = "02:10:00"
-sbatch_partition = "standard"
-sbatch_qos = "standard"
-sbatch_account = "nemo"
-sbatch_ntasks = 1
-sbatch_mem = "96G"
+job_name = "nemo_pipeline"
+time = "02:10:00"
+partition = "standard"
+ntasks = 1
+mem = "96G"
+kwargs = { account = "nemo", qos = "standard" }
+
+[slurm.jobs]
+# Define Python virtual environment activation command:
+venv_cmd = "source ~/.conda_init; conda activate env_nemo_cookbook"
+# Define SLURM job type ("array" or "single"):
+job_type = "array"
 
 # Define the initial, final and step input patterns for batch job submission:
 ip_start = 1976
@@ -18,8 +32,8 @@ ip_end = 2025
 ip_step = 1
 # Define maximum number of concurrent SLURM jobs:
 max_concurrent_jobs = 2
-# Define Python virtual environment activation command:
-venv_cmd = "source ~/.conda_init; conda activate env_nemo_cookbook"
+# Kill the jobarray in the event of any job failure:
+kill_on_fail = true
 
 [inputs]
 # Define NEMO ocean model filepaths used to construct NEMODataTree object:
@@ -31,15 +45,30 @@ cmorised = false
 iperio = true
 nftype = "T"
 read_mask = false
-# NEMO T-grid (scalar) variables:
-gridT_filepath = "${nemo_dir}/{ip}/eORCA12_1m_grid_T_{ip}*.nc"
-gridT_vars = [ "thetao_con", "so_abs" ]
-# NEMO U-grid (zonal vector) variables:
-gridU_filepath = "${nemo_dir}/{ip}/eORCA12_1m_grid_U_{ip}*.nc"
-gridU_vars = [ "tauuo" ]
-# NEMO V-grid (meridional vector) variables:
-gridV_filepath = "${nemo_dir}/{ip}/eORCA12_1m_grid_V_{ip}*.nc"
-gridV_vars = [ "vo", "e3v" ]
+
+[inputs.gridT]
+# -- NEMO T-grid (scalar) variables -- #
+filepath = "${nemo_dir}/{ip}/eORCA12_1m_grid_T_{ip}*.nc"
+vars = [ "thetao_con", "so_abs" ]
+
+[inputs.gridU]
+# -- NEMO U-grid (zonal vector) variables -- #
+filepath = "${nemo_dir}/{ip}/eORCA12_1m_grid_U_{ip}*.nc"
+vars = [ "tauuo" ]
+
+[inputs.gridV]
+# -- NEMO V-grid (meridional vector) variables -- #
+filepath = "${nemo_dir}/{ip}/eORCA12_1m_grid_V_{ip}*.nc"
+vars = [ "vo", "e3v" ]
+
+[inputs.gridW]
+# -- NEMO W-grid (vertical vector) variables -- #
+
+[inputs.gridF]
+# -- NEMO F-grid (vorticity vector) variables -- #
+
+[inputs.icemod]
+# -- NEMO icemod (sea-ice) variables -- #
 
 [diagnostics]
 # Define diagnostics to be computed using NEMODataTree:

@@ -1,8 +1,15 @@
+# ================================================================================ #
+# eORCA12_ERA5v1_RAPID_config.toml
+#
+# Description: NOC NPD ERA5v1 eORCA12 configuration for NEMO pipeline
+# -> RAPID section extraction.
+# ================================================================================ #
+
 [slurm]
 # Define directories for SLURM job scripts and logs:
 job_dir = "/home/users/atb299/nemo_pipeline/examples/outputs/jobs"
 log_dir = "/home/users/atb299/nemo_pipeline/examples/outputs/logs"
-log_prefix = "eORCA12_ERA5_GSR"
+log_prefix = "eORCA12_ERA5_RAPID"
 # SLURM batch job submission parameters:
 sbatch_job_name = "nemo_pipeline"
 sbatch_time = "02:10:00"
@@ -31,25 +38,40 @@ cmorised = false
 iperio = true
 nftype = "T"
 read_mask = false
-# NEMO T-grid (scalar) variables:
-gridT_filepath = "${nemo_dir}/{ip}/eORCA12_1m_grid_T_{ip}*.nc"
-gridT_vars = [ "thetao_con", "so_abs" ]
-# NEMO U-grid (zonal vector) variables:
-gridU_filepath = "${nemo_dir}/{ip}/eORCA12_1m_grid_U_{ip}*.nc"
-gridU_vars = [ "uo", "e3u", "tauuo" ]
-# NEMO V-grid (meridional vector) variables:
-gridV_filepath = "${nemo_dir}/{ip}/eORCA12_1m_grid_V_{ip}*.nc"
-gridV_vars = [ "vo", "e3v", "tauvo" ]
+
+[inputs.gridT]
+# -- NEMO T-grid (scalar) variables -- #
+filepath = "${nemo_dir}/{ip}/eORCA12_1m_grid_T_{ip}*.nc"
+vars = [ "thetao_con", "so_abs" ]
+
+[inputs.gridU]
+# -- NEMO U-grid (zonal vector) variables -- #
+filepath = "${nemo_dir}/{ip}/eORCA12_1m_grid_U_{ip}*.nc"
+vars = [ "tauuo" ]
+
+[inputs.gridV]
+# -- NEMO V-grid (meridional vector) variables -- #
+filepath = "${nemo_dir}/{ip}/eORCA12_1m_grid_V_{ip}*.nc"
+vars = [ "vo", "e3v" ]
+
+[inputs.gridW]
+# -- NEMO W-grid (vertical vector) variables -- #
+
+[inputs.gridF]
+# -- NEMO F-grid (vorticity vector) variables -- #
+
+[inputs.icemod]
+# -- NEMO icemod (sea-ice) variables -- #
 
 [diagnostics]
 # Define diagnostics to be computed using NEMODataTree:
-diagnostic = { module = "nemo_pipeline.diagnostics.core", function = "extract_gsr_section" }
-kwargs = { }
+diagnostic = { module = "nemo_pipeline.diagnostics.core", function = "extract_zonal_section" }
+kwargs = { lat = 26.5, lon_min = -81.0, lon_max = -12.0, tau_name = "tauuo", scalar_names = [ "thetao_con", "so_abs" ] }
 
 [outputs]
 # Define NEMO ocean model pipeline output file:
-output_dir = "/gws/nopw/j04/nemo_vol1/atb299/EPOC/Sections/GSR"
-output_name = "eORCA12_ERA5_v1_GSR"
+output_dir = "/gws/nopw/j04/nemo_vol1/atb299/EPOC/Sections/RAPID"
+output_name = "eORCA12_ERA5_v1_RAPID"
 date_format = "M"
 format = "netcdf"
 # Define output dataset chunking:
