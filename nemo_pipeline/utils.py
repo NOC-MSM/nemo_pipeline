@@ -14,7 +14,7 @@ from pathlib import Path
 from nemo_pipeline.validation import AppConfig
 
 
-def load_config(args: dict) -> AppConfig:
+def load_config(args: dict) -> dict:
     """
     Load NEMO Pipeline configuration .toml file.
 
@@ -28,8 +28,8 @@ def load_config(args: dict) -> AppConfig:
     
     Returns:
     --------
-    AppConfig
-        Configuration parameters.
+    dict
+        Configuration .toml parameters.
     """
     # Open config .toml file:
     path = Path(args['config_file'])
@@ -47,7 +47,7 @@ def load_config(args: dict) -> AppConfig:
 def load_diagnostic(
     module_name: str,
     function_name: str
-    ):
+    ) -> callable:
     """
     Dynamically load user-defined diagnostic function.
 
@@ -60,7 +60,7 @@ def load_diagnostic(
 
     Returns:
     --------
-    function
+    callable
         User-defined diagnostic function.
     """
     # Validate inputs:
