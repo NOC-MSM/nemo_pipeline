@@ -133,7 +133,7 @@ def submit(
     ] = True,
     depends_on: Annotated[
         Optional[str],
-        typer.Option(help="SLURM job ID that NEMO Pipeline job depends on.", rich_help_panel="Options"),
+        typer.Option(help="Defer the start of this NEMO Pipeline job until the specified SLURM job ID has completed successfully.", rich_help_panel="Options"),
     ] = None,
     input_pattern: Annotated[
         Optional[str],
