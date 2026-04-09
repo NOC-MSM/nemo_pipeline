@@ -52,7 +52,7 @@ def _create_grid_filepaths(
                     if '${nemo_dir}' in fpath:
                         fpath = fpath.replace('${nemo_dir}', inputs['nemo_dir'])
                     if '{ip}' in fpath:
-                        if args['input_pattern'] == "":
+                        if args['input_pattern'] is None:
                             raise ValueError(f"Missing --input_pattern argument to replace {{ip}} in {grid} filepath[{n}].")
                         fpath = fpath.replace('{ip}', args['input_pattern'])
                         logging.info(f"* Overriding {grid}_filepath[{n}] using input pattern --> {fpath}")
@@ -64,7 +64,7 @@ def _create_grid_filepaths(
                 if '${nemo_dir}' in filepath:
                     filepath = filepath.replace('${nemo_dir}', inputs['nemo_dir'])
                 if '{ip}' in filepath:
-                    if args['input_pattern'] == "":
+                    if args['input_pattern'] is None:
                         raise ValueError(f"Missing --input_pattern argument to replace {{ip}} in {grid} filepath.")
                     filepath = filepath.replace('{ip}', args['input_pattern'])
                     logging.info(f"* Overriding {grid}_filepath using input pattern --> {filepath}")

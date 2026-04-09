@@ -10,7 +10,7 @@ Created By: Ollie Tooth (oliver.tooth@noc.ac.uk)
 import typer
 import logging
 from .__init__ import __version__
-from typing_extensions import Annotated
+from typing_extensions import Annotated, Optional
 from nemo_pipeline.submit import submit_slurm_pipeline
 from nemo_pipeline.pipeline import describe_nemo_pipeline, run_nemo_pipeline
 
@@ -66,13 +66,13 @@ def init_logging(
 def describe(
     config: Annotated[str, typer.Argument(help="Path to NEMO Pipeline config .toml file")],
     log: Annotated[
-        str,
+        Optional[str],
         typer.Option(help="Path to write NEMO Pipeline log file", rich_help_panel="Options")
     ] = "nemo_pipeline.log",
     input_pattern: Annotated[
-        str,
+        Optional[str],
         typer.Option(help="Pattern used to substitute {ip} in NEMO grid filepaths in config .toml file.", rich_help_panel="Options"),
-    ] = "",
+    ] = None,
 ) -> None:
     """
     Describe NEMO pipeline defined by configuration (.toml) file.
@@ -95,13 +95,13 @@ def describe(
 def run(
     config: Annotated[str, typer.Argument(help="Path to NEMO Pipeline config .toml file")],
     log: Annotated[
-        str,
+        Optional[str],
         typer.Option(help="Path to write NEMO Pipeline log file", rich_help_panel="Options")
     ] = "nemo_pipeline.log",
     input_pattern: Annotated[
-        str,
+        Optional[str],
         typer.Option(help="Pattern used to substitute {ip} in NEMO grid filepaths in config .toml file.", rich_help_panel="Options"),
-    ] = "",
+    ] = None,
 ) -> None:
     """
     Run NEMO pipeline defined by configuration (.toml) file in current process.
@@ -124,20 +124,24 @@ def run(
 def submit(
     config: Annotated[str, typer.Argument(help="Path to NEMO Pipeline config .toml file")],
     log: Annotated[
-        str,
+        Optional[str],
         typer.Option(help="Path to write NEMO Pipeline log file", rich_help_panel="Options")
     ] = "nemo_pipeline.log",
     submit: Annotated[
-        bool,
+        Optional[bool],
         typer.Option(help="Submit the job to the SLURM scheduler.", rich_help_panel="Options"),
     ] = True,
+    depends_on: Annotated[
+        Optional[str],
+        typer.Option(help="SLURM job ID that NEMO Pipeline job depends on.", rich_help_panel="Options"),
+    ] = None,
     input_pattern: Annotated[
-        str,
+        Optional[str],
         typer.Option(help="Pattern used to substitute {ip} in NEMO grid filepaths in config .toml file. Only applicable to single SLURM jobs.", rich_help_panel="Options"),
-    ] = "",
+    ] = None,
 ) -> None:
     """
-    Submit NEMO pipeline defined by configuration (.toml) file as a SLURM job array.
+    Submit NEMO pipeline defined by configuration (.toml) file as an individual SLURM job or a SLURM job array.
     """
     # -- Initialise Logging -- #
     init_logging(log_filepath=log)
@@ -148,9 +152,12 @@ def submit(
         "config_file": config,
         "log_filepath": log,
         "submit": submit,
+        "depends_on": depends_on,
         "input_pattern": input_pattern,
     }
+
     submit_slurm_pipeline(args=args)
+
     if submit:
         logging.info("✔ NEMO Pipeline Submitted ✔")
     else:
